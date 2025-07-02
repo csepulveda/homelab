@@ -29,7 +29,9 @@ spec:
         syncOptions:
           - PruneLast=true
           - CreateNamespace=true
+          {{- if eq .path.basename "stackgres-operator" }}
           - ServerSideApply=true
+          {{- end }}
         automated:
           prune: true
           allowEmpty: true
