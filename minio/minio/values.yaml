@@ -1,8 +1,8 @@
 minio:
   metrics:
-  enabled: true
-  serviceMonitor:
     enabled: true
+    serviceMonitor:
+      enabled: true
   ingress:
     enabled: true
     hostname: s3.csepulveda.net
