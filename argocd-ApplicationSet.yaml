@@ -29,6 +29,7 @@ spec:
         syncOptions:
           - PruneLast=true
           - CreateNamespace=true
+          - ServerSideApply=true
         automated:
           prune: true
           allowEmpty: true
