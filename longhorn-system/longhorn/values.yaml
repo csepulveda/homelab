@@ -1,0 +1,4 @@
+longhorn:
+  service:
+    ui:
+      type: LoadBalancer
