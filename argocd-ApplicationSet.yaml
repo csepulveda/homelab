@@ -32,7 +32,7 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - PruneLast=true
-          {{- if eq .path.basename "stackgres-operator" }}
+          {{- if or (eq .path.basename "stackgres-operator") (eq .path.basename "cilium")}}
           - ServerSideApply=true
           {{- end }}
         automated:
