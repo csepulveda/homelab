@@ -1,4 +1,12 @@
 apiVersion: stackgres.io/v1
+  kind: SGInstanceProfile
+  metadata:
+    name: size-l
+  spec:
+    cpu: "4"
+    memory: 4Gi
+---
+apiVersion: stackgres.io/v1
 kind: SGPostgresConfig
 metadata:
   name: immich-config
@@ -29,6 +37,7 @@ spec:
         version: 0.3.0
   configurations:
     sgPostgresConfig: immich-config
+  sgInstanceProfile: size-l
   pods:
     persistentVolume: 
       size: 10Gi
