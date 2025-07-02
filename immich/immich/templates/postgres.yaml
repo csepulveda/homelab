@@ -17,7 +17,7 @@ spec:
   managedSql:
   instances: 3
   postgres:
-    version: 14.17
+    version: "14.17"
     extensions:
       - name: cube
       - name: earthdistance
