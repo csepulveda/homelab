@@ -6,7 +6,7 @@ version: 1.16.3
 appVersion: 0.16.3
 
 dependencies:
-- name: stackgres-charts
+- name: stackgres-operator
   version: 1.16.3
   repository: "https://stackgres.io/downloads/stackgres-k8s/stackgres/helm/"
   alias: stackgres-operator
