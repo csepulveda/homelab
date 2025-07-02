@@ -36,6 +36,13 @@ spec:
             - /spec/ports/0/nodePort
             - /spec/ports/1/nodePort
       {{- end }}
+      {{- if eq .path.basename "immich" }}
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas
+      {{- end }}
       syncPolicy:
         syncOptions:
           - CreateNamespace=true

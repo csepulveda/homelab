@@ -15,11 +15,8 @@ immich:
           - hosts:
             - immich.csepulveda.net
             secretName: immich.csepulveda.net-tls
+            
   machine-learning:
-    enabled: true
-    controller:
-      replicas: null
-
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
