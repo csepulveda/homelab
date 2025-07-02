@@ -17,8 +17,7 @@ immich:
             secretName: immich.csepulveda.net-tls
   machine-learning:
     enabled: true
-    controller:
-      replicas: null
+    replicas: null
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
