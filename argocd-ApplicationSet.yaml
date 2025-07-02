@@ -25,15 +25,16 @@ spec:
       destination:
         name: in-cluster
         namespace: '{{path[0]}}'
+
   templatePatch: |
     spec:
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
           - PruneLast=true
-        {{- if eq .path.basename "stackgres-operator" }}
+          {{- if eq .path.basename "stackgres-operator" }}
           - ServerSideApply=true
-        {{- end }}
+          {{- end }}
         automated:
           prune: true
           allowEmpty: true
