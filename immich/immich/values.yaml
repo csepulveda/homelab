@@ -29,29 +29,19 @@ immich:
         size: 10Gi
         type: emptyDir
         accessMode: ReadWriteMany
-
     resources:
       requests:
         cpu: "300m"
-        memory: "256Mi"
-        
-    autoscaling:
-      enabled: true
-      minReplicas: 1
-      maxReplicas: 4
-      targetCPUUtilizationPercentage: 80
-
+        memory: "256Mi" 
 
   image:
     tag: v1.135.3
-
   immich:
     metrics:
       enabled: true
     persistence:
       library:
         existingClaim: immich
-
   redis:
     enabled: true
 
