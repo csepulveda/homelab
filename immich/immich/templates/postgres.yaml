@@ -1,10 +1,10 @@
 apiVersion: stackgres.io/v1
-  kind: SGInstanceProfile
-  metadata:
-    name: size-l
-  spec:
-    cpu: "4"
-    memory: 4Gi
+kind: SGInstanceProfile
+metadata:
+  name: size-l
+spec:
+  cpu: "4"
+  memory: 4Gi
 ---
 apiVersion: stackgres.io/v1
 kind: SGPostgresConfig
