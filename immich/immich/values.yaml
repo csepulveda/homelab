@@ -1,5 +1,9 @@
 immich:
   server:
+    resources:
+      requests:
+        cpu: "300m"
+        memory: "256Mi" 
     ingress:
       main:
         enabled: true
@@ -15,7 +19,7 @@ immich:
           - hosts:
             - immich.csepulveda.net
             secretName: immich.csepulveda.net-tls
-            
+
   machine-learning:
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
