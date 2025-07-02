@@ -4,8 +4,8 @@ metadata:
   name: immich-db-l
   namespace: immich
 spec:
-  cpu: "4"
-  memory: 4Gi
+  cpu: "3"
+  memory: 3Gi
 ---
 apiVersion: stackgres.io/v1
 kind: SGPostgresConfig
