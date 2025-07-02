@@ -10,7 +10,7 @@ democratic-csi:
   driver:
     existingConfigSecret: 
     config:
-      driver: freenas-driver-config
+      driver: freenas-api-iscsi
       iscsi:
         extentAvailThreshold: 0
         extentBlocksize: 512
