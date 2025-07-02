@@ -15,6 +15,32 @@ immich:
           - hosts:
             - immich.csepulveda.net
             secretName: immich.csepulveda.net-tls
+  machine-learning:
+    enabled: true
+    image:
+      repository: ghcr.io/immich-app/immich-machine-learning
+      pullPolicy: IfNotPresent
+    env:
+      TRANSFORMERS_CACHE: /cache
+      MACHINE_LEARNING_HTTP_KEEPALIVE_TIMEOUT_S: 0
+    persistence:
+      cache:
+        enabled: true
+        size: 10Gi
+        type: emptyDir
+        accessMode: ReadWriteMany
+
+    resources:
+      requests:
+        cpu: "300m"
+        memory: "256Mi"
+        
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 80
+
 
   image:
     tag: v1.135.3
