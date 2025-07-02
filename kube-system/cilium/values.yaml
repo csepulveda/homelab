@@ -1,0 +1,29 @@
+cilium:
+  cluster:
+    name: default
+  externalIPs:
+    enabled: true
+  ingressController:
+    default: true
+    enabled: true
+    loadbalancerMode: shared
+    service:
+      annotations:
+        io.cilium/lb-ipam-ips: 192.168.100.200
+  ipam:
+    operator:
+      clusterPoolIPv4PodCIDRList: 10.42.0.0/16
+  k8sClientRateLimit:
+    burst: 200
+    qps: 50
+  k8sServiceHost: 192.168.100.150
+  k8sServicePort: 6443
+  kubeProxyReplacement: true
+  l2announcements:
+    enabled: true
+  operator:
+    replicas: 1
+    rollOutPods: true
+  rollOutCiliumPods: true
+  routingMode: tunnel
+  tunnelProtocol: vxlan

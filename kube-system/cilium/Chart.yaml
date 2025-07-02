@@ -1,0 +1,13 @@
+
+apiVersion: v2
+name: cilium
+description: install cilium
+type: application
+version: 1.17.5
+appVersion: 1.17.5
+
+dependencies:
+- name: cilium
+  version: 1.17.5
+  repository: "https://helm.cilium.io/"
+  alias: cilium
