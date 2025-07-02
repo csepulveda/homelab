@@ -48,6 +48,13 @@ immich:
         existingClaim: immich
   redis:
     enabled: true
+    master:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 1
 
   env:
     - name: IMMICH_TELEMETRY_INCLUDE
