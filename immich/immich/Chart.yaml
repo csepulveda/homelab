@@ -1,0 +1,12 @@
+apiVersion: v2
+name: kro
+description: install kro
+type: application
+version: 0.3.0
+appVersion: 0.0.1
+
+dependencies:
+- name: kro
+  version: 0.3.0
+  repository: "oci://ghcr.io/kro-run/kro"
+  alias: kro
