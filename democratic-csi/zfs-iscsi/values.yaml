@@ -1,0 +1,64 @@
+zfs-iscsi:
+  controller:
+    driver:
+      enabled: true
+      image:
+        registry: docker.io/democraticcsi/democratic-csi
+        tag: next
+  csiDriver:
+    name: org.democratic-csi.iscsi
+  driver:
+    existingConfigSecret: 
+    config:
+      driver: freenas-driver-config
+      iscsi:
+        extentAvailThreshold: 0
+        extentBlocksize: 512
+        extentDisablePhysicalBlocksize: true
+        extentInsecureTpc: true
+        extentRpm: SSD
+        extentXenCompat: false
+        interface: null
+        namePrefix: csi-
+        nameSuffix: -clustera
+        targetGroups:
+        - targetGroupAuthGroup: null
+          targetGroupAuthType: None
+          targetGroupInitiatorGroup: 2
+          targetGroupPortalGroup: 2
+        targetPortal: 192.168.100.155:3260
+        targetPortals: []
+      zfs:
+        cli:
+          paths:
+            chroot: /usr/sbin/chroot
+            sudo: /usr/bin/sudo
+            zfs: /usr/sbin/zfs
+            zpool: /usr/sbin/zpool
+          sudoEnabled: true
+        datasetParentName: Storage/k8s/v
+        detachedSnapshotsDatasetParentName: Storage/k8s/s
+        zvolBlocksize: null
+        zvolCompression: null
+        zvolDedup: null
+        zvolEnableReservation: false
+  storageClasses:
+  - allowVolumeExpansion: true
+    defaultClass: false
+    mountOptions: []
+    name: iscsi
+    parameters:
+      detachedVolumesFromSnapshots: "false"
+      fsType: ext4
+    reclaimPolicy: Delete
+    secrets:
+      controller-expand-secret: null
+      controller-publish-secret: null
+      node-publish-secret: null
+      node-stage-secret: null
+      provisioner-secret: null
+    volumeBindingMode: Immediate
+  volumeSnapshotClasses:
+  - name: iscsi
+    parameters:
+      detachedSnapshots: "true"
