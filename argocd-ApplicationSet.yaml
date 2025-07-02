@@ -4,28 +4,28 @@ metadata:
   name: devops-stack
 spec:
   generators:
-    - git:
-        repoURL: https://github.com/csepulveda/homelab.git
-        revision: main
-        directories:
-          - path: '**/**'
-  template:   
+  - git:
+      directories:
+      - path: '**/**'
+      repoURL: https://github.com/csepulveda/homelab.git
+      revision: main
+  goTemplate: true
+  template:
     metadata:
-      name: '{{path.basename}}'
+      name: '{{.path.basename}}'
     spec:
-      project: default
-      sources:
-        - repoURL: https://github.com/csepulveda/homelab.git
-          targetRevision: main
-          path: '{{path[0]}}/{{path[1]}}'
-          helm:
-            releaseName: '{{path.basename}}'            
-            valueFiles:
-              - 'values.yaml'            
       destination:
         name: in-cluster
-        namespace: '{{path[0]}}'
-
+        namespace: '{{index .path.segments 0}}'
+      project: default
+      sources:
+      - helm:
+          releaseName: '{{.path.basename}}'
+          valueFiles:
+          - values.yaml
+        path: '{{.path.path}}'
+        repoURL: https://github.com/csepulveda/homelab.git
+        targetRevision: main
   templatePatch: |
     spec:
       syncPolicy:
