@@ -1,0 +1,12 @@
+server:
+  ingress:
+    enabled: true
+    annotations:
+      external-dns.alpha.kubernetes.io/target: router.csepulveda.net
+      cert-manager.io/cluster-issuer: letsencrypt
+    ingressClassName: cilium
+    hostname: argocd.csepulveda.net
+    tls: true
+configs:
+  params:
+    server.insecure: true

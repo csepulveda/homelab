@@ -1,0 +1,33 @@
+kube:
+  prometheus:
+    prometheusSpec:
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            resources:
+              requests:
+                storage: 10Gi
+            storageClassName: iscsi
+      serviceMonitorSelector: {}
+      serviceMonitorSelectorNilUsesHelmValues: false
+  grafana:
+    admin:
+      existingSecret: grafana-admin-secret
+    additionalDataSources:
+      - name: Loki
+        access: proxy
+        type: loki
+        uid: loki
+        url: http://loki-gateway/
+    ingress:
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+        external-dns.alpha.kubernetes.io/target: router.csepulveda.net
+      enabled: true
+      hosts:
+      - grafana.csepulveda.net
+      ingressClassName: cilium
+      tls:
+      - hosts:
+        - grafana.csepulveda.net
+        secretName: grafana-csepulveda-tls

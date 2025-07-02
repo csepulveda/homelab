@@ -1,0 +1,11 @@
+promtail:
+  config:
+    logLevel: warn
+    snippets:
+      pipelineStages:
+      - cri: {}
+      - limit:
+          burst: 100
+          by_label_name: namespace
+          drop: true
+          rate: 100

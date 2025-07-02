@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: devops-stack
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/csepulveda/homelab.git
+        revision: main
+        directories:
+          - path: '**/**'
+  template:   
+    metadata:
+      name: '{{path.basename}}'
+    spec:
+      project: default
+      sources:
+        - repoURL: https://github.com/csepulveda/homelab.git
+          targetRevision: main
+          path: '{{path[0]}}/{{path[1]}}'
+          helm:
+            releaseName: '{{path.basename}}'            
+            valueFiles:
+              - 'values.yaml'            
+      destination:
+        name: in-cluster
+        namespace: '{{path[0]}}'
+      syncPolicy:
+        syncOptions:
+          - PruneLast=true
+          - CreateNamespace=true
+        automated:
+          prune: true
+          allowEmpty: true
+          selfHeal: true

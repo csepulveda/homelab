@@ -1,0 +1,30 @@
+name: updatecli
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  updatecli:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Updatecli in the runner
+        uses: updatecli/updatecli-action@v2
+
+      - name: Run Updatecli in Dry Run mode
+        run: updatecli diff
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Updatecli in Apply mode
+        run: updatecli apply
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,66 @@
+loki:
+  global:
+    extraEnv:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: loki-s3-secret
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: loki-s3-secret
+          key: AWS_SECRET_ACCESS_KEY
+  monitoring:
+    dashboards:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+  loki:
+    image:
+      tag: 3.5.1
+    storage:
+      type: s3
+      bucketNames:
+        chunks: loki
+        ruler: loki
+        admin: loki
+      s3:
+        endpoint: "http://minio.minio.svc.cluster.local:9000"
+        region: "us-east-1"
+        s3ForcePathStyle: true
+        insecure: true
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 2
+    schemaConfig:
+      configs:
+      - from: "2024-10-09"
+        index:
+          period: 24h
+          prefix: loki_index_
+        object_store: s3
+        schema: v13
+        store: tsdb
+  minio:
+    enabled: false
+  read:
+    replicas: 2
+    extraArgs:
+    - -log.level=error
+  write:
+    replicas: 2
+    persistence:
+      storageClass: iscsi
+    extraArgs:
+    - -log.level=error
+  backend:
+    replicas: 2
+    persistence:
+      storageClass: iscsi
+    extraArgs:
+    - -log.level=error
+  gateway:
+    replicas: 2
+    extraArgs:
+    - -log.level=error

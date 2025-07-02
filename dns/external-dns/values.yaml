@@ -1,0 +1,19 @@
+external-dns:
+  provider: cloudflare
+  env:
+    - name: CF_API_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: cloudflare-dns-secret
+          key: CLOUDFLARE_API_KEY
+    - name: CF_API_EMAIL
+      valueFrom:
+        secretKeyRef:
+          name: cloudflare-dns-secret
+          key: CLOUDFLARE_EMAIL
+  policy: sync
+  sources:
+    - service
+    - ingress
+  domainFilters:
+    - csepulveda.net
