@@ -2,11 +2,11 @@ apiVersion: v2
 name: gpu-operator
 description: install gpu-operator
 type: application
-version: v24.3.0
-appVersion: v24.3.0
+version: v24.9.2
+appVersion: v24.9.2
 
 dependencies:
 - name: gpu-operator
-  version: v24.3.0
+  version: v24.9.2
   repository: "https://helm.ngc.nvidia.com/nvidia"
   alias: gpu-operator
