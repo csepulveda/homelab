@@ -24,14 +24,14 @@ immich:
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
-      tag: v1.135.0-cuda
-    nodeSelector:
-      nvidia.com/gpu.count: "1"
+      #tag: v1.135.3-cuda
+    #nodeSelector:
+      #nvidia.com/gpu.count: "1"
     env:
       TRANSFORMERS_CACHE: /cache
       MACHINE_LEARNING_HTTP_KEEPALIVE_TIMEOUT_S: 0
-      IMMICH_LOG_LEVEL: debug
-      ORT_DISABLE_MIMALLOC: "1"
+      #IMMICH_LOG_LEVEL: debug
+      #ORT_DISABLE_MIMALLOC: "1"
     persistence:
       cache:
         enabled: true
@@ -42,8 +42,8 @@ immich:
       requests:
         cpu: "300m"
         memory: "256Mi"
-      limits:
-        nvidia.com/gpu: 1
+      #limits:
+        #nvidia.com/gpu: 1
 
   image:
     tag: v1.135.3
