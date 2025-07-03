@@ -22,8 +22,11 @@ immich:
 
   machine-learning:
     image:
-      repository: ghcr.io/immich-app/immich-machine-learning
+      repository: ghcr.io/immich-app/immich-machine-learning-cuda
       pullPolicy: IfNotPresent
+      tag: v1.135.3-cuda
+    nodeSelector:
+      nvidia.com/gpu.count: "1"
     env:
       TRANSFORMERS_CACHE: /cache
       MACHINE_LEARNING_HTTP_KEEPALIVE_TIMEOUT_S: 0
