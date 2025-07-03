@@ -22,7 +22,12 @@ immich:
           - hosts:
             - immich.csepulveda.net
             secretName: immich.csepulveda.net-tls
-
+    persistence:
+      backup:
+        enabled: true
+        mountPath: /backup
+        existingClaim: immich-backup
+      
   machine-learning:
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
@@ -58,6 +63,7 @@ immich:
     persistence:
       library:
         existingClaim: immich
+
   redis:
     enabled: true
     master:
