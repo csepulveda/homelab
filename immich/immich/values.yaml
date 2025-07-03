@@ -30,6 +30,7 @@ immich:
     env:
       TRANSFORMERS_CACHE: /cache
       MACHINE_LEARNING_HTTP_KEEPALIVE_TIMEOUT_S: 0
+      IMMICH_LOG_LEVEL: debug
     persistence:
       cache:
         enabled: true
