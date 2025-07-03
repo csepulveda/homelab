@@ -1,0 +1,4 @@
+dcgm-exporter:
+  runtime: nvidia
+  nodeSelector:
+    nvidia.com/gpu.deploy.driver: "true" 
