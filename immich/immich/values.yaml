@@ -39,7 +39,9 @@ immich:
     resources:
       requests:
         cpu: "300m"
-        memory: "256Mi" 
+        memory: "256Mi"
+      limits:
+        nvidia.com/gpu: 1
 
   image:
     tag: v1.135.3
