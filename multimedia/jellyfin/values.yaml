@@ -1,0 +1,13 @@
+jellyfin:
+  service:
+    type: LoadBalancer
+
+  persistence:
+    config:
+      pvc:
+        enabled: true
+        claimName: jellyfin-config
+    media:
+      pvc:
+        enabled: true
+        claimName: jellyfin-media

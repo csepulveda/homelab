@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-media
+  namespace: multimedia
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-config
+  namespace: multimedia
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs
