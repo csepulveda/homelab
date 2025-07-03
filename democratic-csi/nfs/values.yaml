@@ -6,19 +6,21 @@ democratic-csi:
         registry: docker.io/democraticcsi/democratic-csi
         tag: next
   csiDriver:
-    name: org.democratic-csi.iscsi
+    name: org.democratic-csi.nfs
   driver:
-    existingConfigSecret: freenas-driver-config
+    existingConfigSecret: freenas-driver-config-nfs
     config:
-      driver: freenas-api-iscsi
+      driver: freenas-api-nfs
   storageClasses:
   - allowVolumeExpansion: true
     defaultClass: false
-    mountOptions: []
-    name: iscsi
+    name: nfs
     parameters:
       detachedVolumesFromSnapshots: "false"
-      fsType: ext4
+      fsType: nfs
+    mountOptions:
+      - noatime
+      - nfsvers=4
     reclaimPolicy: Delete
     secrets:
       controller-expand-secret: null
@@ -28,6 +30,6 @@ democratic-csi:
       provisioner-secret: null
     volumeBindingMode: Immediate
   volumeSnapshotClasses:
-  - name: iscsi
+  - name: nfs
     parameters:
       detachedSnapshots: "true"
