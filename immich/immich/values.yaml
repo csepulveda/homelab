@@ -24,8 +24,8 @@ immich:
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
-      #tag: v1.135.3-cuda
-      tag: v1.97.0-cuda #https://github.com/immich-app/immich/issues/8570
+      tag: v1.135.3-cuda
+      #tag: v1.97.0-cuda #https://github.com/immich-app/immich/issues/8570
     nodeSelector:
       nvidia.com/gpu.count: "1"
     env:
