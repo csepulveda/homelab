@@ -1,4 +1,6 @@
 minio:
+  auth:
+    existingSecret: admin-creds
   metrics:
     enabled: true
     serviceMonitor:
