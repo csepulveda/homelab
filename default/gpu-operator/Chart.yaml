@@ -8,5 +8,6 @@ appVersion: v24.9.2
 dependencies:
 - name: gpu-operator
   version: v24.9.2
-  repository: "https://helm.ngc.nvidia.com/nvidia"
+  repository: "https://nvidia.github.io/gpu-operator"
+  #repository: "https://helm.ngc.nvidia.com/nvidia"
   alias: gpu-operator
