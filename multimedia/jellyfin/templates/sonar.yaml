@@ -53,3 +53,17 @@ spec:
       - name: downloads
         persistentVolumeClaim:
           claimName: qbitt-download
+---
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr
+  namespace: multimedia
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8989
+  selector:
+    app: sonarr

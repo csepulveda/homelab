@@ -53,3 +53,16 @@ spec:
       - name: downloads
         persistentVolumeClaim:
           claimName: qbitt-download
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: multimedia
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 7878
+  selector:
+    app: qbittorrent  
