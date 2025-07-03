@@ -21,26 +21,12 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 5Gi
+      storage: 200Gi
   storageClassName: nfs
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: sonarr-config
-  namespace: multimedia
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 5Gi
-  storageClassName: nfs
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-
   name: qbitt-download
   namespace: multimedia
 spec:
