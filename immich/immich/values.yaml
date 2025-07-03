@@ -31,6 +31,7 @@ immich:
       TRANSFORMERS_CACHE: /cache
       MACHINE_LEARNING_HTTP_KEEPALIVE_TIMEOUT_S: 0
       IMMICH_LOG_LEVEL: debug
+      ORT_DISABLE_MIMALLOC: "1"
     persistence:
       cache:
         enabled: true
