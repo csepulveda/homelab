@@ -49,7 +49,7 @@ spec:
           claimName: radarr-config
       - name: videos
         persistentVolumeClaim:
-          claimName: jellyfin-medias
+          claimName: jellyfin-media
       - name: downloads
         persistentVolumeClaim:
           claimName: qbitt-download
