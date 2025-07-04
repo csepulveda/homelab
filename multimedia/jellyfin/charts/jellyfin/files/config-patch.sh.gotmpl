@@ -1,0 +1,2 @@
+#!/bin/sh
+dasel -f /config/config/system.xml  put ServerConfiguration.EnableMetrics -t bool -v {{ .Values.config.metrics | quote}}

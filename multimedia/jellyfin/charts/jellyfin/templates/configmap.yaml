@@ -1,0 +1,11 @@
+{{- if .Values.config.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "jellyfin.fullname" . }}-config
+  labels:
+    {{- include "jellyfin.labels" . | nindent 4 }}
+data:
+  patch.sh: |-
+    {{ tpl (.Files.Get "files/config-patch.sh.gotmpl") . | nindent 4 }}
+{{- end }}
