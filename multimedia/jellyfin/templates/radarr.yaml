@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: radarr-config
+  namespace: multimedia
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radarr
+  namespace: multimedia
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: radarr
+  template:
+    metadata:
+      labels:
+        app: radarr
+    spec:
+      containers:
+      - name: radarr
+        image: linuxserver/radarr
+        env:
+        - name: PUID
+          value: "1057"  
+        - name: PGID
+          value: "1056"  
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: videos
+          mountPath: /movies
+        - name: downloads
+          mountPath: /downloads
+        ports:
+        - containerPort: 7878
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: radarr-config
+      - name: videos
+        persistentVolumeClaim:
+          claimName: jellyfin-videos
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: qbitt-download
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: radarr
+  namespace: multimedia
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 7878
+  selector:
+    app: radarr
