@@ -56,4 +56,29 @@ spec:
   - protocol: TCP
     port: 9117
     targetPort: 9117
-  type: LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  name: jackett
+  namespace: multimedia
+spec:
+  ingressClassName: cilium
+  rules:
+  - host: jackett.csepulveda.net
+    http:
+      paths:
+      - backend:
+          service:
+            name: jackett
+            port:
+              number: 9117
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - jackett.csepulveda.net
+    secretName: jackett.csepulveda.net-tls

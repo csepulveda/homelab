@@ -54,16 +54,40 @@ spec:
         persistentVolumeClaim:
           claimName: qbitt-download
 ---
----
 apiVersion: v1
 kind: Service
 metadata:
   name: sonarr
   namespace: multimedia
 spec:
-  type: LoadBalancer
   ports:
     - port: 80
       targetPort: 8989
   selector:
     app: sonarr
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  name: sonarr
+  namespace: multimedia
+spec:
+  ingressClassName: cilium
+  rules:
+  - host: sonarr.csepulveda.net
+    http:
+      paths:
+      - backend:
+          service:
+            name: sonarr
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - sonarr.csepulveda.net
+    secretName: sonarr.csepulveda.net-tls

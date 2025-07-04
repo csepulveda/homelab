@@ -1,7 +1,4 @@
 jellyfin:
-  service:
-    type: LoadBalancer
-
   persistence:
     config:
       pvc:
