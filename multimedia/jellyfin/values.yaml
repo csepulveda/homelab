@@ -1,6 +1,4 @@
 jellyfin:
-  hostNetwork: true
-
   service:
     type: LoadBalancer
 
