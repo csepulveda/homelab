@@ -1,6 +1,5 @@
 jellyfin:
-  podAnnotations:
-    ipam.cilium.io/ip-pool: multimedia-pool
+  hostNetwork: true
 
   service:
     type: LoadBalancer
