@@ -2,14 +2,14 @@ apiVersion: stackgres.io/v1
 kind: SGInstanceProfile
 metadata:
   annotations:
-  name: immich-db-1g
+  name: immich-db-2g
   namespace: immich
 spec:
   cpu: "1"
-  memory: 1Gi
+  memory: 2Gi
   requests:
     cpu: "1"
-    memory: 1Gi
+    memory: 2Gi
 
 ---
 apiVersion: stackgres.io/v1
@@ -42,7 +42,7 @@ spec:
         version: 0.3.0
   configurations:
     sgPostgresConfig: immich-config
-  sgInstanceProfile: immich-db-1g
+  sgInstanceProfile: immich-db-2g
   pods:
     persistentVolume: 
       size: 10Gi
