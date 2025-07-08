@@ -4,8 +4,8 @@ metadata:
   name: immich-db-new-l
   namespace: immich
 spec:
-  cpu: "2"
-  memory: 2Gi
+  cpu: "1"
+  memory: 1Gi
 ---
 apiVersion: stackgres.io/v1
 kind: SGPostgresConfig
@@ -23,7 +23,7 @@ metadata:
   name: immich-postgresql
   namespace: immich
 spec:
-  instances: 2
+  instances: 3
   postgres:
     version: "14.17"
     extensions:
