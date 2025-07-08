@@ -12,21 +12,6 @@ spec:
   memory: 2Gi
   requests:
     cpu: "1"
-      cluster-reconciliation-cycle:
-        cpu: "1"
-        memory: 1Gi
-      dbops.set-dbops-running:
-        cpu: "1"
-        memory: 256Mi
-      major-version-upgrade:
-        cpu: "1"
-        memory: 1Gi
-      reset-patroni:
-        cpu: "2"
-        memory: 1Gi
-      setup-filesystem:
-        cpu: "1"
-        memory: 1Gi
     memory: 2Gi
 
 ---
