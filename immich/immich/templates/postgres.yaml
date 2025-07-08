@@ -6,10 +6,10 @@ metadata:
   namespace: immich
 spec:
   cpu: "1"
-  memory: 2Gi
+  memory: 1Gi
   requests:
     cpu: "1"
-    memory: 2Gi
+    memory: 1Gi
 
 ---
 apiVersion: stackgres.io/v1
