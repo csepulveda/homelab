@@ -29,6 +29,9 @@ metadata:
   namespace: immich
 spec:
   instances: 2
+  backups:
+    pgDump:
+      enabled: true
   postgres:
     version: "14.17"
     extensions:
@@ -39,7 +42,6 @@ spec:
       - name: pg_trgm
       - name: unaccent
       - name: vectors
-        version: 0.3.0
   configurations:
     sgPostgresConfig: immich-config
   sgInstanceProfile: immich-db-2g
