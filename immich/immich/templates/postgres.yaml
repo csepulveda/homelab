@@ -6,88 +6,12 @@ metadata:
   namespace: immich
 spec:
   containers:
-    backup.create-backup:
-      cpu: "1"
-      memory: 256Mi
-    cluster-controller:
-      cpu: 250m
-      memory: 512Mi
-    dbops.run-dbops:
-      cpu: "1"
-      memory: 256Mi
-    dbops.set-dbops-result:
-      cpu: "1"
-      memory: 256Mi
-    envoy:
-      cpu: 500m
-      memory: 64Mi
-    fluent-bit:
-      cpu: 125m
-      memory: 64Mi
-    fluentd:
-      cpu: 500m
-      memory: 2Gi
-    pgbouncer:
-      cpu: 250m
-      memory: 64Mi
-    postgres-util:
-      cpu: 125m
-      memory: 64Mi
-    prometheus-postgres-exporter:
       cpu: 125m
       memory: 256Mi
   cpu: "1"
-  initContainers:
-    cluster-reconciliation-cycle:
-      cpu: "1"
-      memory: 1Gi
-    dbops.set-dbops-running:
-      cpu: "1"
-      memory: 256Mi
-    major-version-upgrade:
-      cpu: "1"
-      memory: 1Gi
-    reset-patroni:
-      cpu: "1"
-      memory: 1Gi
-    setup-filesystem:
-      cpu: "1"
-      memory: 1Gi
   memory: 1Gi
   requests:
-    containers:
-      backup.create-backup:
-        cpu: "1"
-        memory: 256Mi
-      cluster-controller:
-        cpu: 250m
-        memory: 512Mi
-      dbops.run-dbops:
-        cpu: "1"
-        memory: 256Mi
-      dbops.set-dbops-result:
-        cpu: "1"
-        memory: 256Mi
-      envoy:
-        cpu: 500m
-        memory: 64Mi
-      fluent-bit:
-        cpu: 125m
-        memory: 64Mi
-      fluentd:
-        cpu: 500m
-        memory: 2Gi
-      pgbouncer:
-        cpu: 250m
-        memory: 64Mi
-      postgres-util:
-        cpu: 125m
-        memory: 64Mi
-      prometheus-postgres-exporter:
-        cpu: 125m
-        memory: 256Mi
     cpu: "1"
-    initContainers:
       cluster-reconciliation-cycle:
         cpu: "1"
         memory: 1Gi
