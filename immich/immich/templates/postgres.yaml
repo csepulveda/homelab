@@ -9,7 +9,7 @@ spec:
       cpu: 125m
       memory: 256Mi
   cpu: "1"
-  memory: 1Gi
+  memory: 2Gi
   requests:
     cpu: "1"
       cluster-reconciliation-cycle:
@@ -27,7 +27,7 @@ spec:
       setup-filesystem:
         cpu: "1"
         memory: 1Gi
-    memory: 1Gi
+    memory: 2Gi
 
 ---
 apiVersion: stackgres.io/v1
