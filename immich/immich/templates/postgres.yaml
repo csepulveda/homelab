@@ -14,16 +14,6 @@ spec:
 apiVersion: stackgres.io/v1
 kind: SGPostgresConfig
 metadata:
-  name: immich-config
-  namespace: immich
-spec:
-  postgresVersion: "14"
-  postgresql.conf:
-    shared_preload_libraries: "pg_stat_statements, auto_explain, vectors"
----
-apiVersion: stackgres.io/v1
-kind: SGPostgresConfig
-metadata:
   name: immich-config-15
   namespace: immich
 spec:
