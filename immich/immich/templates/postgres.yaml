@@ -1,3 +1,23 @@
+apiVersion: stackgres.io/v1beta1
+kind: SGObjectStorage
+metadata:
+  name: backup-stackgres
+  namespace: immich
+spec:
+  type: s3Compatible
+  s3Compatible:
+    bucket: stackgres
+    enablePathStyleAddressing: true
+    endpoint: http://minio.minio:9000
+    awsCredentials:
+      secretKeySelectors:
+        accessKeyId:
+          key: root-user
+          name: minio
+        secretAccessKey:
+          key: root-password
+          name: minio
+---
 apiVersion: stackgres.io/v1
 kind: SGInstanceProfile
 metadata:
@@ -54,6 +74,13 @@ spec:
         version: 0.3.0
   configurations:
     sgPostgresConfig: immich-config-15
+    backups:
+      - sgObjectStorage: backup-stackgres
+        retention: 10
+        cronSchedule: "0 0 * * *"
+        compression: lz4
+        useVolumeSnapshot: true
+        volumeSnapshotClass: iscsi 
   sgInstanceProfile: immich-db-2g
   prometheusAutobind: true
   pods:
