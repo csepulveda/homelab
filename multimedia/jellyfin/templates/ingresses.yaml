@@ -4,6 +4,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
     io.cilium/lb-mode: "dedicated"
+    io.cilium/lb-ipam-ips: "192.168.100.201"
   name: jellyfin
   namespace: multimedia
 spec:
