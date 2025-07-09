@@ -27,7 +27,7 @@ metadata:
   name: immich-postgresql
   namespace: immich
 spec:
-  instances: 3
+  instances: 2
   postgres:
     version: "14.17"
     extensions:
