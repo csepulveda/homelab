@@ -23,3 +23,20 @@ spec:
   - hosts:
     - jellyfin.csepulveda.net
     secretName: jellyfin.csepulveda.net-tls
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-jellyfin-from-home
+  namespace: multimedia
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: jellyfin
+  ingress:
+  - fromCIDR:
+      - 192.168.100.0/24
+    toPorts:
+    - ports:
+      - port: "8096"
+        protocol: TCP
