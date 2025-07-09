@@ -1,0 +1,23 @@
+ingress-nginx:
+  controller:
+    electionID: ingress-controller-leader
+    ingressClass: nginx
+    ingressClassResource:
+      name: kube-system
+      enabled: true
+      default: false
+      controllerValue: "k8s.io/ingress-nginx"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+    metrics:
+      enabled: true
+      serviceMonitor:
+        additionalLabels:
+          release: prometheus
+        enabled: true
+    replicaCount: 1
+    autoscaling:
+      enabled: false
+      minReplicas: 1
