@@ -4,6 +4,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    external-dns.alpha.kubernetes.io/target: router.csepulveda.net
   name: jellyfin
   namespace: multimedia
 spec:
