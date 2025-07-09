@@ -1,7 +1,7 @@
 immich:
   server:
     controller:
-      replicas: 0
+      replicas: 1
     runtimeClassName: nvidia
     nodeSelector:
       nvidia.com/gpu.deploy.driver: "true"
