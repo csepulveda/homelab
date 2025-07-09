@@ -1,62 +1,62 @@
-apiVersion: stackgres.io/v1
-kind: SGInstanceProfile
-metadata:
-  annotations:
-  name: immich-db-2g
-  namespace: immich
-spec:
-  cpu: "1"
-  memory: 2Gi
-  requests:
-    cpu: "1"
-    memory: 2Gi
----
-apiVersion: stackgres.io/v1
-kind: SGInstanceProfile
-metadata:
-  annotations:
-  name: immich-db-4g-cpularge
-  namespace: immich
-spec:
-  cpu: "5"
-  memory: 4Gi
-  requests:
-    cpu: "5"
-    memory: 4Gi
----
-apiVersion: stackgres.io/v1
-kind: SGPostgresConfig
-metadata:
-  name: immich-config-15
-  namespace: immich
-spec:
-  postgresVersion: "15"
-  postgresql.conf:
-    shared_preload_libraries: "pg_stat_statements, auto_explain, vectors"
----
-apiVersion: stackgres.io/v1
-kind: SGCluster
-metadata:
-  name: immich-postgresql
-  namespace: immich
-spec:
-  instances: 2
-  postgres:
-    version: "15.12"
-    extensions:
-      - name: cube
-      - name: earthdistance
-      - name: vector
-      - name: uuid-ossp
-      - name: pg_trgm
-      - name: unaccent
-      - name: vectors
-        version: 0.3.0
-  configurations:
-    sgPostgresConfig: immich-config-15
-  sgInstanceProfile: immich-db-2g
-  prometheusAutobind: true
-  pods:
-    persistentVolume: 
-      size: 10Gi
-      storageClass: iscsi
+# apiVersion: stackgres.io/v1
+# kind: SGInstanceProfile
+# metadata:
+#   annotations:
+#   name: immich-db-2g
+#   namespace: immich
+# spec:
+#   cpu: "1"
+#   memory: 2Gi
+#   requests:
+#     cpu: "1"
+#     memory: 2Gi
+# ---
+# apiVersion: stackgres.io/v1
+# kind: SGInstanceProfile
+# metadata:
+#   annotations:
+#   name: immich-db-4g-cpularge
+#   namespace: immich
+# spec:
+#   cpu: "5"
+#   memory: 4Gi
+#   requests:
+#     cpu: "5"
+#     memory: 4Gi
+# ---
+# apiVersion: stackgres.io/v1
+# kind: SGPostgresConfig
+# metadata:
+#   name: immich-config-15
+#   namespace: immich
+# spec:
+#   postgresVersion: "15"
+#   postgresql.conf:
+#     shared_preload_libraries: "pg_stat_statements, auto_explain, vectors"
+# ---
+# apiVersion: stackgres.io/v1
+# kind: SGCluster
+# metadata:
+#   name: immich-postgresql
+#   namespace: immich
+# spec:
+#   instances: 2
+#   postgres:
+#     version: "15.12"
+#     extensions:
+#       - name: cube
+#       - name: earthdistance
+#       - name: vector
+#       - name: uuid-ossp
+#       - name: pg_trgm
+#       - name: unaccent
+#       - name: vectors
+#         version: 0.3.0
+#   configurations:
+#     sgPostgresConfig: immich-config-15
+#   sgInstanceProfile: immich-db-2g
+#   prometheusAutobind: true
+#   pods:
+#     persistentVolume: 
+#       size: 10Gi
+#       storageClass: iscsi
