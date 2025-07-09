@@ -1,12 +1,4 @@
 longhorn:
-  ingress: 
-    enabled: true
-    ingressClassName: nginx
-    host: longhorn.csepulveda.net
-    tls: true
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt
-      nginx.ingress.kubernetes.io/proxy-body-size: "0"
   metrics:
     serviceMonitor:
       enabled: true
