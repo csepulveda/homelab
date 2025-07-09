@@ -17,7 +17,7 @@ metadata:
   name: immich-config
   namespace: immich
 spec:
-  postgresVersion: "14"
+  postgresVersion: "15"
   postgresql.conf:
     shared_preload_libraries: "pg_stat_statements, auto_explain, vectors"
 ---
@@ -29,7 +29,7 @@ metadata:
 spec:
   instances: 2
   postgres:
-    version: "14.17"
+    version: "15.12"
     extensions:
       - name: cube
       - name: earthdistance
