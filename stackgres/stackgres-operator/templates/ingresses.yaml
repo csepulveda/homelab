@@ -16,7 +16,7 @@ spec:
           service:
             name: stackgres-restapi
             port:
-              number: 9080
+              number: 443
         path: /
         pathType: Prefix
   tls:
