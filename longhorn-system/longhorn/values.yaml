@@ -1,7 +1,7 @@
 longhorn:
   ingress: 
     enabled: true
-    className: nginx
+    ingressClassName: nginx
     host: longhorn.csepulveda.net
     tls: true
     annotations:
