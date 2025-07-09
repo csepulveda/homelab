@@ -30,4 +30,4 @@ democratic-csi:
   volumeSnapshotClasses:
   - name: iscsi
     parameters:
-      detachedSnapshots: "true"
+      detachedSnapshots: "false"
