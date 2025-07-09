@@ -2,4 +2,3 @@ stackgres-operator:
   adminui:
     service:
       type: ClusterIP
-      exposeHTTP: true

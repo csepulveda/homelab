@@ -4,6 +4,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
   name: stackgres
   namespace: stackgres
 spec:
@@ -16,7 +17,7 @@ spec:
           service:
             name: stackgres-restapi
             port:
-              number: 80
+              number: 443
         path: 
         pathType: Prefix
   tls:
