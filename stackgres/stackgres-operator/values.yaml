@@ -1,1 +1,4 @@
 stackgres-operator:
+  adminui:
+    service:
+      type: ClusterIP
