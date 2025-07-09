@@ -3,7 +3,7 @@ ingress-nginx:
     electionID: ingress-controller-leader
     ingressClass: nginx
     ingressClassResource:
-      name: kube-system
+      name: nginx
       enabled: true
       default: false
       controllerValue: "k8s.io/ingress-nginx"

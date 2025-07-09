@@ -3,12 +3,11 @@ kind: Ingress
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
-    io.cilium/lb-mode: "dedicated"
-    io.cilium/lb-ipam-ips: "192.168.100.201"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
   name: jellyfin
   namespace: multimedia
 spec:
-  ingressClassName: cilium
+  ingressClassName: nginx
   rules:
   - host: jellyfin.csepulveda.net
     http:

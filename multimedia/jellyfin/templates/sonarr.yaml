@@ -75,7 +75,7 @@ metadata:
   name: sonarr
   namespace: multimedia
 spec:
-  ingressClassName: cilium
+  ingressClassName: nginx
   rules:
   - host: sonarr.csepulveda.net
     http:
