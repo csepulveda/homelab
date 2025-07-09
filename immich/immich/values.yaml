@@ -7,21 +7,21 @@ immich:
       requests:
         cpu: "200m"
         memory: "256Mi" 
-    ingress:
-      main:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt
-          external-dns.alpha.kubernetes.io/target: router.csepulveda.net
-          nginx.ingress.kubernetes.io/proxy-body-size: "0"
-        hosts:
-          - host: immich.csepulveda.net
-            paths:
-              - path: "/"
-        tls:
-          - hosts:
-            - immich.csepulveda.net
-            secretName: immich.csepulveda.net-tls
+    #ingress:
+    #  main:
+    #    enabled: true
+    #    annotations:
+    #      cert-manager.io/cluster-issuer: letsencrypt
+    #      external-dns.alpha.kubernetes.io/target: router.csepulveda.net
+    #      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    #    hosts:
+    #      - host: immich.csepulveda.net
+    #        paths:
+    #          - path: "/"
+    #    tls:
+    #      - hosts:
+    #        - immich.csepulveda.net
+    #        secretName: immich.csepulveda.net-tls
       
   machine-learning:
     image:
