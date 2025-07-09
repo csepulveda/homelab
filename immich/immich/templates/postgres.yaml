@@ -34,7 +34,7 @@ spec:
 apiVersion: stackgres.io/v1
 kind: SGCluster
 metadata:
-  name: immich-postgresql
+  name: immich-postgresql-15
   namespace: immich
 spec:
   instances: 3
