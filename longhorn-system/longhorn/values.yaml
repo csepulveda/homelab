@@ -1,4 +1,13 @@
 longhorn:
-  service:
-    ui:
-      type: LoadBalancer
+  ingress: 
+    enabled: true
+    className: nginx
+    host: longhorn.csepulveda.net
+    tls: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  metrics:
+    serviceMonitor:
+      enabled: true
+    

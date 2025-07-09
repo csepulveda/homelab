@@ -60,7 +60,7 @@ metadata:
   name: qbittorrent
   namespace: multimedia
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - port: 80
       targetPort: 8080

@@ -60,7 +60,7 @@ metadata:
   name: radarr
   namespace: multimedia
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - port: 80
       targetPort: 7878
