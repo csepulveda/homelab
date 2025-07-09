@@ -10,7 +10,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: stackgres.csepulveda.net
+  - host: rds.csepulveda.net
     http:
       paths:
       - backend:
@@ -22,5 +22,5 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - stackgres.csepulveda.net
-    secretName: jellyfin.csepulveda.net-tls
+    - rds.csepulveda.net
+    secretName: rds.csepulveda.net-tls
