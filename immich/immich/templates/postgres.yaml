@@ -54,7 +54,7 @@ spec:
         version: 0.3.0
   configurations:
     sgPostgresConfig: immich-config-15
-  sgInstanceProfile: immich-db-4g-cpularge
+  sgInstanceProfile: immich-db-2g
   prometheusAutobind: true
   pods:
     persistentVolume: 
