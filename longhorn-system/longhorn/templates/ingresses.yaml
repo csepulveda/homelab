@@ -4,8 +4,8 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
-  name: 
-  namespace: longhorn
+  name: longhorn
+  namespace: longhorn-system
 spec:
   ingressClassName: nginx
   rules:
