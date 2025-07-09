@@ -27,7 +27,7 @@ immich:
       
   machine-learning:
     controller:
-      replicas: 0
+      replicas: 1
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
