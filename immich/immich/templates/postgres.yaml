@@ -27,7 +27,7 @@ metadata:
   name: immich-postgresql
   namespace: immich
 spec:
-  instances: 3
+  instances: 2
   postgres:
     version: "15.12"
     extensions:
@@ -45,3 +45,4 @@ spec:
   pods:
     persistentVolume: 
       size: 10Gi
+      storageClassName: iscsi
