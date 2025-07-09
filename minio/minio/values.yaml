@@ -13,6 +13,16 @@ minio:
       cert-manager.io/cluster-issuer: letsencrypt
       external-dns.alpha.kubernetes.io/target: router.csepulveda.net
     tls: true
+
+  console:
+    ingress:
+      enabled: true
+      hostname: minio.csepulveda.net
+      ingressClassName: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      tls: true
+  
   persistence:
     storageClass: iscsi
     size: 32Gi
