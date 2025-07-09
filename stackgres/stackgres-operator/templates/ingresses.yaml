@@ -14,12 +14,12 @@ spec:
       paths:
       - backend:
           service:
-            name: stackgres
+            name: stackgres-restapi
             port:
-              number: 443
+              number: 9080
         path: /
         pathType: Prefix
   tls:
   - hosts:
     - stackgres.csepulveda.net
-    secretName: stackgres.csepulveda.net-tls
+    secretName: jellyfin.csepulveda.net-tls
