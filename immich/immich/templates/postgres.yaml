@@ -10,7 +10,6 @@ spec:
   requests:
     cpu: "1"
     memory: 2Gi
-
 ---
 apiVersion: stackgres.io/v1
 kind: SGPostgresConfig
@@ -28,7 +27,7 @@ metadata:
   name: immich-postgresql
   namespace: immich
 spec:
-  instances: 3
+  instances: 2
   postgres:
     version: "14.17"
     extensions:
