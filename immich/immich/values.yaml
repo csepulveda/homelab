@@ -1,5 +1,6 @@
 immich:
   server:
+    replicas: 0
     runtimeClassName: nvidia
     nodeSelector:
       nvidia.com/gpu.deploy.driver: "true"
@@ -24,6 +25,7 @@ immich:
     #        secretName: immich.csepulveda.net-tls
       
   machine-learning:
+    replicas: 0
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
