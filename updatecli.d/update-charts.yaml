@@ -14,7 +14,7 @@ autodiscovery:
   crawlers:
     helm:
       ignore:
-        - name: jellyfin
+        - path: "multimedia/jellyfin"
 
 actions:
   pullrequests:
