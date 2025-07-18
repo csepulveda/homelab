@@ -10,7 +10,7 @@ scms:
       token: "{{ requiredEnv `GITHUB_TOKEN` }}"
 
 autodiscovery:
-  scmid: github
+  scmid: "github"
   crawlers:
     helm:
       ignore:
@@ -18,8 +18,8 @@ autodiscovery:
 
 actions:
   default:
-    kind: github/pullrequest
-    scmid: github
+    kind: "github/pullrequest"
+    scmid: "github"
     title: "chore: bump Helm chart versions"
     spec:
       labels:
