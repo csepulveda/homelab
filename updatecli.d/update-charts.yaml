@@ -11,12 +11,13 @@ scms:
 
 autodiscovery:
   scmid: github
-  actionid: pullrequests
   crawlers:
     helm:
+      scmid: github1
+  actionid: pullrequests
 
 actions:
-  default:
+  pullrequests:
     kind: github/pullrequest
     scmid: github
     title: "chore: bump Helm chart versions"
