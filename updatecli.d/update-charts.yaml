@@ -13,7 +13,9 @@ autodiscovery:
   scmid: github
   crawlers:
     helm:
-      scmid: github1
+      scmid: github
+      ignore:
+        - name: jellyfin
   actionid: pullrequests
 
 actions:
