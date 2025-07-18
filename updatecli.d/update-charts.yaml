@@ -17,7 +17,7 @@ autodiscovery:
         - path: "multimedia/jellyfin"
 
 actions:
-  pullrequests:
+  default:
     kind: github/pullrequest
     scmid: github
     title: "chore: bump Helm chart versions"
