@@ -10,7 +10,8 @@ scms:
       token: "{{ requiredEnv `GITHUB_TOKEN` }}"
 
 autodiscovery:
-  scmid: "github"
+  scmid: github
+  actionid: default
   crawlers:
     helm:
       ignore:
