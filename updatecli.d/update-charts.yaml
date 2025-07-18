@@ -5,7 +5,7 @@ scms:
     kind: "github"
     spec:
       owner: "csepulveda"
-      repository: "k8s-infra"
+      repository: "homelab"
       branch: "main"
       token: "{{ requiredEnv `GITHUB_TOKEN` }}"
 
