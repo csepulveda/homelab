@@ -10,7 +10,7 @@ scms:
       token: "{{ requiredEnv `GITHUB_TOKEN` }}"
 
 autodiscovery:
-  scmid: default
+  scmid: github
   actionid: pullrequests
   crawlers:
     helm:
