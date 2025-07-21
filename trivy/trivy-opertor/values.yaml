@@ -1,3 +1,15 @@
 trivy-operator:
   operator:
     cacheReportTTL: "240h"
+    scannerReportTTL: 72h
+    scanJobTimeout: 15m
+    scanJobsConcurrentLimit: 4
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
