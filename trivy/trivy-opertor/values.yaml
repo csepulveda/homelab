@@ -1,0 +1,3 @@
+trivy-operator:
+  operator:
+    cacheReportTTL: "240h"
