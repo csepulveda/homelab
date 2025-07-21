@@ -3,7 +3,7 @@ trivy-operator:
     cacheReportTTL: "240h"
     scannerReportTTL: 72h
     scanJobTimeout: 15m
-    scanJobsConcurrentLimit: 4
+    scanJobsConcurrentLimit: 6
 
   resources:
     requests:
