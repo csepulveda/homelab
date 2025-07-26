@@ -82,7 +82,6 @@ spec:
         useVolumeSnapshot: true
         volumeSnapshotClass: iscsi 
   sgInstanceProfile: immich-db-2g
-  prometheusAutobind: true
   pods:
     persistentVolume: 
       size: 10Gi
