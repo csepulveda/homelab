@@ -85,4 +85,4 @@ spec:
   pods:
     persistentVolume: 
       size: 10Gi
-      storageClass: iscsi
+      #storageClass: iscsi
