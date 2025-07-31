@@ -60,7 +60,7 @@ metadata:
   name: immich-postgresql
   namespace: immich
 spec:
-  instances: 1
+  instances: 2
   postgres:
     version: "15.12"
     extensions:
@@ -74,13 +74,13 @@ spec:
         version: 0.3.0
   configurations:
     sgPostgresConfig: immich-config-15
-    backups:
-      - sgObjectStorage: backup-stackgres
-        retention: 10
-        cronSchedule: "0 0 * * *"
-        compression: lz4
-        useVolumeSnapshot: true
-        volumeSnapshotClass: iscsi 
+    # backups:
+    #   - sgObjectStorage: backup-stackgres
+    #     retention: 10
+    #     cronSchedule: "0 0 * * *"
+    #     compression: lz4
+    #     useVolumeSnapshot: true
+    #     volumeSnapshotClass: iscsi 
   sgInstanceProfile: immich-db-2g
   pods:
     persistentVolume: 
