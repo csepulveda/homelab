@@ -1,0 +1,6 @@
+dependencies:
+- name: kro
+  repository: oci://ghcr.io/kro-run/kro
+  version: 0.4.0
+digest: sha256:0b980d668f6327cd3b8bb0fb17f38399a4fb49ad12ecdd01d060ac602bb4957d
+generated: "2025-07-31T00:33:23.637804806Z"
