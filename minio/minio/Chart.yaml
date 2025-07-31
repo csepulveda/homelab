@@ -2,11 +2,11 @@ apiVersion: v2
 name: minio
 description: install minio
 type: application
-version: 17.1.0
+version: 17.2.0
 appVersion: 2025.6.13
 
 dependencies:
 - name: minio
-  version: 17.0.13
+  version: 17.0.16
   repository: "https://charts.bitnami.com/bitnami"
   alias: minio
