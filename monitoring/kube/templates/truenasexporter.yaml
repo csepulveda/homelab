@@ -43,7 +43,9 @@ kind: Service
 metadata:
   name: truenas-proxy
   namespace: monitoring
-  labels: {app: truenas-proxy}
+  labels:
+    app: truenas-proxy
+    jobLabel: node-exporter
 spec:
   selector: {app: truenas-proxy}
   ports:
@@ -64,5 +66,12 @@ spec:
     matchNames: ["monitoring"]
   endpoints:
     - port: http-metrics
-      interval: 30s
+      interval: 15s
       path: /metrics
+      metricRelabelings:
+        - action: replace
+          targetLabel: instance
+          replacement: "192.168.100.155:9100"
+        - action: replace
+          targetLabel: nodename
+          replacement: "truenas"
