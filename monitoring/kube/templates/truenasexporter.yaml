@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: truenas-node-exporter
+  namespace: monitoring
+  labels:
+    app: truenas-node-exporter
+spec:
+  ports:
+    - name: http-metrics
+      port: 9100
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: truenas-node-exporter
+  namespace: monitoring
+subsets:
+  - addresses:
+      - ip: 192.168.100.155 # truenas IP address
+    ports:
+      - name: http-metrics
+        port: 9100
+        protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: truenas-node-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: truenas-node-exporter
+  namespaceSelector:
+    matchNames: ["monitoring"]
+  endpoints:
+    - port: http-metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
