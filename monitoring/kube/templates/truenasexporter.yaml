@@ -45,7 +45,8 @@ metadata:
   namespace: monitoring
   labels:
     app: truenas-proxy
-    jobLabel: node-exporter
+    job: node-exporter
+    cluster: home
 spec:
   selector: {app: truenas-proxy}
   ports:
@@ -58,12 +59,16 @@ kind: ServiceMonitor
 metadata:
   name: truenas-proxy
   namespace: monitoring
-  labels: {release: prometheus} # ajusta según tu selector
+  labels:
+    release: prometheus
 spec:
+  jobLabel: job 
   selector:
     matchLabels: {app: truenas-proxy}
   namespaceSelector:
     matchNames: ["monitoring"]
+  targetLabels:
+    - cluster
   endpoints:
     - port: http-metrics
       interval: 15s
