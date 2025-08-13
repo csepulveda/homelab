@@ -46,7 +46,6 @@ metadata:
   labels:
     app: truenas-proxy
     job: node-exporter
-    cluster: home
 spec:
   selector: {app: truenas-proxy}
   ports:
@@ -67,8 +66,6 @@ spec:
     matchLabels: {app: truenas-proxy}
   namespaceSelector:
     matchNames: ["monitoring"]
-  targetLabels:
-    - cluster
   endpoints:
     - port: http-metrics
       interval: 15s
