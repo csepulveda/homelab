@@ -1,47 +1,65 @@
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: truenas-proxy
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: truenas-proxy}
+  template:
+    metadata:
+      labels: {app: truenas-proxy}
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: cfg
+          configMap:
+            name: truenas-proxy-cm
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: truenas-proxy-cm
+  namespace: monitoring
+data:
+  metrics.conf: |
+    server {
+      listen 8080;
+      location /metrics {
+        proxy_pass http://192.168.100.155:9100/metrics;
+      }
+    }
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: truenas-node-exporter
+  name: truenas-proxy
   namespace: monitoring
-  labels:
-    app: truenas-node-exporter
+  labels: {app: truenas-proxy}
 spec:
+  selector: {app: truenas-proxy}
   ports:
     - name: http-metrics
-      port: 9100
-      protocol: TCP
-
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: truenas-node-exporter-1
-  namespace: monitoring
-  labels:
-    kubernetes.io/service-name: truenas-node-exporter
-addressType: IPv4
-ports:
-  - name: http-metrics
-    port: 9100
-    protocol: TCP
-endpoints:
-  - addresses: ["192.168.100.155"]
-    conditions:
-      ready: true
-
+      port: 8080
+      targetPort: 8080
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: truenas-node-exporter
+  name: truenas-proxy
   namespace: monitoring
-  labels:
-    release: prometheus  
+  labels: {release: prometheus} # ajusta según tu selector
 spec:
   selector:
-    matchLabels:
-      app: truenas-node-exporter
+    matchLabels: {app: truenas-proxy}
   namespaceSelector:
     matchNames: ["monitoring"]
   endpoints:
