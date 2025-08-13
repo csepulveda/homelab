@@ -1,3 +1,4 @@
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -10,25 +11,33 @@ spec:
     - name: http-metrics
       port: 9100
       protocol: TCP
+
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
-  name: truenas-node-exporter
+  name: truenas-node-exporter-1
   namespace: monitoring
-subsets:
-  - addresses:
-      - ip: 192.168.100.155 # truenas IP address
-    ports:
-      - name: http-metrics
-        port: 9100
-        protocol: TCP
+  labels:
+    kubernetes.io/service-name: truenas-node-exporter
+addressType: IPv4
+ports:
+  - name: http-metrics
+    port: 9100
+    protocol: TCP
+endpoints:
+  - addresses: ["192.168.100.155"]
+    conditions:
+      ready: true
+
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: truenas-node-exporter
   namespace: monitoring
+  labels:
+    release: prometheus  
 spec:
   selector:
     matchLabels:
@@ -37,6 +46,5 @@ spec:
     matchNames: ["monitoring"]
   endpoints:
     - port: http-metrics
-      interval: 15s
+      interval: 30s
       path: /metrics
-      scheme: http
