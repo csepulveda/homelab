@@ -2,9 +2,9 @@ immich:
   server:
     controller:
       replicas: 1
-    runtimeClassName: nvidia
-    nodeSelector:
-      nvidia.com/gpu.deploy.driver: "true"
+    #runtimeClassName: nvidia
+    #nodeSelector:
+    #  nvidia.com/gpu.deploy.driver: "true"
     resources:
       requests:
         cpu: "200m"
@@ -31,11 +31,12 @@ immich:
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
-      tag: v1.135.3-cuda
+      tag: v1.135.3
+      #tag: v1.135.3-cuda
       #tag: v1.97.0-cuda #https://github.com/immich-app/immich/issues/8570
-    runtimeClassName: nvidia
-    nodeSelector:
-      nvidia.com/gpu.deploy.driver: "true"
+    #runtimeClassName: nvidia
+    #nodeSelector:
+    #  nvidia.com/gpu.deploy.driver: "true"
     env:
       TRANSFORMERS_CACHE: /cache
       MACHINE_LEARNING_HTTP_KEEPALIVE_TIMEOUT_S: 0
@@ -51,8 +52,6 @@ immich:
       requests:
         cpu: "200m"
         memory: "256Mi"
-      limits:
-        nvidia.com/gpu: 1
 
   image:
     tag: v1.135.3
