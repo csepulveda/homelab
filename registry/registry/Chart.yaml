@@ -1,13 +1,7 @@
 
 apiVersion: v2
-name: jellyfin
-description: install jellyfin
+name: registry
+description: install registry
 type: application
-version: 0.3.12
-appVersion: 10.10.7
-
-dependencies:
-- name: jellyfin
-  version: 0.3.12
-  repository: "oci://codeberg.org/wrenix/helm-charts/jellyfin"
-  alias: jellyfin
+version: 0.0.1
+appVersion: 0.0.1
