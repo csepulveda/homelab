@@ -13,7 +13,6 @@ data:
         rootdirectory: /var/lib/registry
     http:
       addr: :5000
-      # TLS deshabilitado para simplicidad (usa Ingress TLS si quieres HTTPS)
       headers:
         X-Content-Type-Options: [nosniff]
     health:
