@@ -23,7 +23,7 @@ kube:
         access: tempo
         type: tempo
         uid: tempo
-        url: http://tempo/
+        url: http://tempo:3200/
     ingress:
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
