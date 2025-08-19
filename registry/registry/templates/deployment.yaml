@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      containers:
+        - name: registry
+          image: registry:2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/registry
+            - name: config
+              mountPath: /etc/docker/registry
+          readinessProbe:
+            httpGet:
+              path: /v2/
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v2/
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: registry-data
+        - name: config
+          configMap:
+            name: registry-config
+            items:
+              - key: config.yml
+                path: config.yml
