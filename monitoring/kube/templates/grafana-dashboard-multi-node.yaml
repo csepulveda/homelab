@@ -29,10 +29,11 @@ data:
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 1,
+      "id": 42,
       "links": [],
       "panels": [
         {
-          "collapsed": false,
+          "collapsed": true,
           "gridPos": {
             "h": 1,
             "w": 24,
@@ -47,7 +48,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -100,8 +101,7 @@ data:
                     "value": 80
                   }
                 ]
-              },
-              "unit": "celsius"
+              }
             },
             "overrides": []
           },
@@ -130,18 +130,18 @@ data:
             {
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.150:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
-              "legendFormat": "{{`{{sensor}}`}}",
+              "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "Temperature - 192.168.100.150",
+          "title": "192.168.100.150:9100",
           "type": "timeseries"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -194,8 +194,7 @@ data:
                     "value": 80
                   }
                 ]
-              },
-              "unit": "celsius"
+              }
             },
             "overrides": []
           },
@@ -224,23 +223,23 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "Prometheus"
+                "uid": "prometheus"
               },
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.151:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
               "hide": false,
-              "legendFormat": "{{`{{sensor}}`}}",
+              "legendFormat": "{{instance}}",
               "range": true,
               "refId": "B"
             }
           ],
-          "title": "Temperature - 192.168.100.151",
+          "title": "192.168.100.151:9100",
           "type": "timeseries"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -293,8 +292,7 @@ data:
                     "value": 80
                   }
                 ]
-              },
-              "unit": "celsius"
+              }
             },
             "overrides": []
           },
@@ -323,23 +321,23 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "Prometheus"
+                "uid": "prometheus"
               },
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.152:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
               "hide": false,
-              "legendFormat": "{{`{{sensor}}`}}",
+              "legendFormat": "{{instance}}",
               "range": true,
               "refId": "C"
             }
           ],
-          "title": "Temperature - 192.168.100.152",
+          "title": "192.168.100.152:9100",
           "type": "timeseries"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -392,8 +390,7 @@ data:
                     "value": 80
                   }
                 ]
-              },
-              "unit": "celsius"
+              }
             },
             "overrides": []
           },
@@ -422,17 +419,17 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "Prometheus"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "avg by (instance) (node_hwmon_temp_celsius{instance=~\"192.168.100.155:9100\", chip=\"platform_coretemp_0\"})",
+              "expr": " avg by (instance) (node_hwmon_temp_celsius{instance=~\"192.168.100.155:9100\", chip=\"platform_coretemp_0\"})",
               "hide": false,
-              "legendFormat": "{{`{{instance}}`}} avg",
+              "legendFormat": "{{instance}}",
               "range": true,
               "refId": "D"
             }
           ],
-          "title": "Temperature - 192.168.100.155",
+          "title": "192.168.100.155:9100",
           "type": "timeseries"
         },
         {
@@ -441,7 +438,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 1
+            "y": 8
           },
           "id": 14,
           "panels": [],
@@ -510,7 +507,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
               "editorMode": "code",
               "expr": "100 - (avg(rate(node_cpu_seconds_total{job=\"node-exporter\", mode=\"idle\", instance=\"${instance:pipe}\", cluster=\"$cluster\"}[$__rate_interval])) * 100)",
@@ -518,7 +515,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "CPU Usage - ${instance}",
+          "title": "CPU Usage - $instance",
           "type": "gauge"
         },
         {
@@ -583,7 +580,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
               "editorMode": "code",
               "expr": "100 - (node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=\"${instance:pipe}\", cluster=\"$cluster\"} / node_memory_MemTotal_bytes{job=\"node-exporter\", instance=\"${instance:pipe}\", cluster=\"$cluster\"} * 100)",
@@ -591,7 +588,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Memory Usage - ${instance}",
+          "title": "Memory Usage - $instance",
           "type": "gauge"
         },
         {
@@ -610,7 +607,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -698,12 +695,12 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "Prometheus"
+                "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "1 - (avg by (instance) (rate(node_cpu_seconds_total{job=\"node-exporter\", mode=\"idle\", instance=~\"${instance}\", cluster=\"$cluster\"}[$__rate_interval])))",
+              "expr": "1 - (avg by (instance) (rate(node_cpu_seconds_total{job=\"node-exporter\", mode=\"idle\", instance=~\"$instance\", cluster=\"$cluster\"}[$__rate_interval])))",
               "intervalFactor": 5,
-              "legendFormat": "{{`{{instance}}`}}",
+              "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
             }
@@ -801,13 +798,33 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
               "editorMode": "code",
-              "expr": "node_load1{job=\"node-exporter\", instance=~\"${instance}\", cluster=\"$cluster\"}",
-              "legendFormat": "{{`{{instance}}`}} - 1m",
+              "expr": "node_load1{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
+              "legendFormat": "{{instance}} - 1m",
               "range": true,
               "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              },
+              "expr": "node_load5{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
+              "hide": true,
+              "legendFormat": "{{instance}} - 5m",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              },
+              "expr": "node_load15{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
+              "hide": true,
+              "legendFormat": "{{instance}} - 15m",
+              "refId": "C"
             }
           ],
           "title": "Load Average - Todos los Nodos",
@@ -917,11 +934,11 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
               "editorMode": "code",
-              "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\"${instance}\", cluster=\"$cluster\"} / node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\"${instance}\", cluster=\"$cluster\"})",
-              "legendFormat": "{{`{{instance}}`}}",
+              "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\".*\", cluster=\"$cluster\"} / node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\".*\", cluster=\"$cluster\"})",
+              "legendFormat": "{{instance}}",
               "range": true,
               "refId": "A"
             }
@@ -1019,11 +1036,11 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
               "editorMode": "code",
-              "expr": "node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\"${instance}\", cluster=\"$cluster\"} - node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\"${instance}\", cluster=\"$cluster\"}",
-              "legendFormat": "{{`{{instance}}`}} - Used",
+              "expr": "node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"} - node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
+              "legendFormat": "{{instance}} - Used",
               "range": true,
               "refId": "A"
             }
@@ -1039,9 +1056,9 @@ data:
             "x": 0,
             "y": 37
           },
-          "id": 22,
+          "id": 7,
           "panels": [],
-          "title": "Disk Throughput - Todos los Nodos",
+          "title": "Disk I/O - Todos los Nodos",
           "type": "row"
         },
         {
@@ -1112,7 +1129,7 @@ data:
             "x": 0,
             "y": 38
           },
-          "id": 23,
+          "id": 8,
           "options": {
             "legend": {
               "calcs": [
@@ -1134,15 +1151,15 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
-              "expr": "avg by (instance) (rate(node_disk_read_bytes_total{job=\"node-exporter\", instance=~\"${instance}\", cluster=\"$cluster\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\"}[$__rate_interval]))",
+              "expr": "rate(node_disk_read_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\"}[$__rate_interval])",
               "intervalFactor": 1,
-              "legendFormat": "{{`{{instance}}`}} - avg read",
+              "legendFormat": "{{instance}}-{{device}} read",
               "refId": "A"
             }
           ],
-          "title": "Disk Read Throughput - Average per Node",
+          "title": "Disk Read - Todos los Nodos",
           "type": "timeseries"
         },
         {
@@ -1213,7 +1230,7 @@ data:
             "x": 12,
             "y": 38
           },
-          "id": 24,
+          "id": 9,
           "options": {
             "legend": {
               "calcs": [
@@ -1235,16 +1252,283 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
-              "expr": "avg by (instance) (rate(node_disk_written_bytes_total{job=\"node-exporter\", instance=~\"${instance}\", cluster=\"$cluster\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\"}[$__rate_interval]))",
+              "expr": "rate(node_disk_written_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\"}[$__rate_interval])",
               "intervalFactor": 1,
-              "legendFormat": "{{`{{instance}}`}} - avg write",
+              "legendFormat": "{{instance}}-{{device}} write",
               "refId": "A"
             }
           ],
-          "title": "Disk Write Throughput - Average per Node",
+          "title": "Disk Write - Todos los Nodos",
           "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 0.8
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.9
+                  }
+                ]
+              },
+              "unit": "decbytes"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Instance"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 180
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Mounted on"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 200
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Size"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 93
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Used"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 72
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Available"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 88
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Used, %"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percentunit"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "gauge"
+                    }
+                  },
+                  {
+                    "id": "max",
+                    "value": 1
+                  },
+                  {
+                    "id": "min",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 46
+          },
+          "id": 10,
+          "options": {
+            "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "fields": "",
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Used, %"
+              }
+            ]
+          },
+          "pluginVersion": "12.1.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              },
+              "expr": "max by (instance, mountpoint) (node_filesystem_size_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", fstype!=\"\", mountpoint!=\"\"})\n",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              },
+              "expr": "max by (instance, mountpoint) (node_filesystem_avail_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", fstype!=\"\", mountpoint!=\"\"})\n",
+              "format": "table",
+              "instant": true,
+              "legendFormat": "",
+              "refId": "B"
+            }
+          ],
+          "title": "Disk Space Usage - Todos los Nodos",
+          "transformations": [
+            {
+              "id": "groupBy",
+              "options": {
+                "fields": {
+                  "Value #A": {
+                    "aggregations": [
+                      "lastNotNull"
+                    ],
+                    "operation": "aggregate"
+                  },
+                  "Value #B": {
+                    "aggregations": [
+                      "lastNotNull"
+                    ],
+                    "operation": "aggregate"
+                  },
+                  "instance": {
+                    "aggregations": [],
+                    "operation": "groupby"
+                  },
+                  "mountpoint": {
+                    "aggregations": [],
+                    "operation": "groupby"
+                  }
+                }
+              }
+            },
+            {
+              "id": "merge"
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "Used",
+                "binary": {
+                  "left": "Value #A (lastNotNull)",
+                  "operator": "-",
+                  "reducer": "sum",
+                  "right": "Value #B (lastNotNull)"
+                },
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "Used, %",
+                "binary": {
+                  "left": "Used",
+                  "operator": "/",
+                  "reducer": "sum",
+                  "right": "Value #A (lastNotNull)"
+                },
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {},
+                "renameByName": {
+                  "Value #A (lastNotNull)": "Size",
+                  "Value #B (lastNotNull)": "Available",
+                  "instance": "Instance",
+                  "mountpoint": "Mounted on"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "fields": {},
+                "sort": [
+                  {
+                    "field": "Instance"
+                  },
+                  {
+                    "field": "Mounted on"
+                  }
+                ]
+              }
+            }
+          ],
+          "type": "table"
         },
         {
           "collapsed": false,
@@ -1252,11 +1536,11 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 46
+            "y": 56
           },
-          "id": 25,
+          "id": 11,
           "panels": [],
-          "title": "Network Interfaces - Specific per Node",
+          "title": "Network - Todos los Nodos",
           "type": "row"
         },
         {
@@ -1264,6 +1548,7 @@ data:
             "type": "prometheus",
             "uid": "${datasource}"
           },
+          "description": "Network received (bits/s)",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1325,9 +1610,9 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 57
           },
-          "id": 26,
+          "id": 12,
           "options": {
             "legend": {
               "calcs": [
@@ -1349,45 +1634,15 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
-              "expr": "rate(node_network_receive_bytes_total{job=\"node-exporter\", instance=\"192.168.100.150:9100\", device=\"enp2s0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
+              "expr": "rate(node_network_receive_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device!=\"lo\"}[$__rate_interval]) * 8",
               "intervalFactor": 1,
-              "legendFormat": "150 - enp2s0 RX",
+              "legendFormat": "{{instance}}-{{device}} RX",
               "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${datasource}"
-              },
-              "expr": "rate(node_network_receive_bytes_total{job=\"node-exporter\", instance=\"192.168.100.151:9100\", device=\"enp1s0f0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
-              "intervalFactor": 1,
-              "legendFormat": "151 - enp1s0f0 RX",
-              "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${datasource}"
-              },
-              "expr": "rate(node_network_receive_bytes_total{job=\"node-exporter\", instance=\"192.168.100.152:9100\", device=\"enp2s0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
-              "intervalFactor": 1,
-              "legendFormat": "152 - enp2s0 RX",
-              "refId": "C"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${datasource}"
-              },
-              "expr": "rate(node_network_receive_bytes_total{job=\"node-exporter\", instance=\"192.168.100.155:9100\", device=\"br0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
-              "intervalFactor": 1,
-              "legendFormat": "155 - br0 RX",
-              "refId": "D"
             }
           ],
-          "title": "Network Received - Specific Interfaces",
+          "title": "Network Received - Todos los Nodos",
           "type": "timeseries"
         },
         {
@@ -1395,6 +1650,7 @@ data:
             "type": "prometheus",
             "uid": "${datasource}"
           },
+          "description": "Network transmitted (bits/s)",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1423,7 +1679,7 @@ data:
                 "scaleDistribution": {
                   "type": "linear"
                 },
-                "showPoints": "never",
+                "showPoints": "auto",
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
@@ -1456,9 +1712,9 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 57
           },
-          "id": 27,
+          "id": 13,
           "options": {
             "legend": {
               "calcs": [
@@ -1480,45 +1736,15 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "$datasource"
               },
-              "expr": "rate(node_network_transmit_bytes_total{job=\"node-exporter\", instance=\"192.168.100.150:9100\", device=\"enp2s0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
+              "expr": "rate(node_network_transmit_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device!=\"lo\"}[$__rate_interval]) * 8",
               "intervalFactor": 1,
-              "legendFormat": "150 - enp2s0 TX",
+              "legendFormat": "{{instance}}-{{device}} TX",
               "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${datasource}"
-              },
-              "expr": "rate(node_network_transmit_bytes_total{job=\"node-exporter\", instance=\"192.168.100.151:9100\", device=\"enp1s0f0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
-              "intervalFactor": 1,
-              "legendFormat": "151 - enp1s0f0 TX",
-              "refId": "B"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${datasource}"
-              },
-              "expr": "rate(node_network_transmit_bytes_total{job=\"node-exporter\", instance=\"192.168.100.152:9100\", device=\"enp2s0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
-              "intervalFactor": 1,
-              "legendFormat": "152 - enp2s0 TX",
-              "refId": "C"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${datasource}"
-              },
-              "expr": "rate(node_network_transmit_bytes_total{job=\"node-exporter\", instance=\"192.168.100.155:9100\", device=\"br0\", cluster=\"$cluster\"}[$__rate_interval]) * 8",
-              "intervalFactor": 1,
-              "legendFormat": "155 - br0 TX",
-              "refId": "D"
             }
           ],
-          "title": "Network Transmitted - Specific Interfaces",
+          "title": "Network Transmitted - Todos los Nodos",
           "type": "timeseries"
         }
       ],
@@ -1526,16 +1752,15 @@ data:
       "refresh": "1m",
       "schemaVersion": 41,
       "tags": [
-        "node-exporter",
-        "multi-node",
-        "kubernetes"
+        "node-exporter-mixin",
+        "multi-node"
       ],
       "templating": {
         "list": [
           {
             "current": {
               "text": "Prometheus",
-              "value": "Prometheus"
+              "value": "prometheus"
             },
             "name": "datasource",
             "options": [],
@@ -1604,12 +1829,12 @@ data:
         ]
       },
       "time": {
-        "from": "now-6h",
+        "from": "now-12h",
         "to": "now"
       },
       "timepicker": {},
       "timezone": "browser",
       "title": "Multi-Node Exporter Dashboard",
       "uid": "multi-node-dashboard-001",
-      "version": 1
+      "version": 7
     }
