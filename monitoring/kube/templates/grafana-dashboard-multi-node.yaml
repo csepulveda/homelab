@@ -1045,7 +1045,7 @@ data:
           {
             "current": {
               "text": "Prometheus",
-              "value": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+              "value": "Prometheus"
             },
             "name": "datasource",
             "options": [],
