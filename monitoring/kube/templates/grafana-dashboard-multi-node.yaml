@@ -34,7 +34,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+            "uid": "Prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -128,7 +128,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+            "uid": "Prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -211,7 +211,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+                "uid": "Prometheus"
               },
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.151:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
@@ -227,7 +227,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+            "uid": "Prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -310,7 +310,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+                "uid": "Prometheus"
               },
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.152:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
@@ -326,7 +326,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+            "uid": "Prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -409,7 +409,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+                "uid": "Prometheus"
               },
               "editorMode": "code",
               "expr": "avg by (instance) (node_hwmon_temp_celsius{instance=~\"192.168.100.155:9100\", chip=\"platform_coretemp_0\"})",
@@ -610,7 +610,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+            "uid": "Prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -698,7 +698,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "{{ .Values.grafana.datasource.uid | default "prometheus" }}"
+                "uid": "Prometheus"
               },
               "editorMode": "code",
               "expr": "1 - (avg by (instance) (rate(node_cpu_seconds_total{job=\"node-exporter\", mode=\"idle\", instance=~\"${instance}\", cluster=\"$cluster\"}[$__rate_interval])))",
