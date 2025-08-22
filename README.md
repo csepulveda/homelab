@@ -4,6 +4,9 @@
 
 Cluster Kubernetes K3s on-premise con 4 nodos (3 master + 1 worker), optimizado para cargas de trabajo containerizadas y servicios multimedia.
 
+![minirack](./minirack.png)
+![nas](./nas.png)
+
 ## 📊 Especificaciones del Cluster
 
 - **Distribución**: K3s v1.32+
@@ -39,6 +42,7 @@ Cluster Kubernetes K3s on-premise con 4 nodos (3 master + 1 worker), optimizado 
 | **RAM** | 32GB ECC |
 | **Storage** | 2x RAIDZ1 pools (8 discos + 2 hot spares) |
 | **Capacidad** | 3.2TB total / 1.6TB disponible |
+| **Controladora** | LSI 9300 12Gbps 16 ports |
 | **Red** | 10GbE SFP+ |
 | **Función** | NFS/iSCSI storage + VM host |
 
