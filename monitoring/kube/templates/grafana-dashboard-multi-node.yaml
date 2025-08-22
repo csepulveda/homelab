@@ -130,7 +130,7 @@ data:
             {
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.150:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "A"
             }
@@ -228,7 +228,7 @@ data:
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.151:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
               "hide": false,
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "B"
             }
@@ -326,7 +326,7 @@ data:
               "editorMode": "code",
               "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.152:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
               "hide": false,
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "C"
             }
@@ -424,7 +424,7 @@ data:
               "editorMode": "code",
               "expr": " avg by (instance) (node_hwmon_temp_celsius{instance=~\"192.168.100.155:9100\", chip=\"platform_coretemp_0\"})",
               "hide": false,
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "D"
             }
@@ -700,7 +700,7 @@ data:
               "editorMode": "code",
               "expr": "1 - (avg by (instance) (rate(node_cpu_seconds_total{job=\"node-exporter\", mode=\"idle\", instance=~\"$instance\", cluster=\"$cluster\"}[$__rate_interval])))",
               "intervalFactor": 5,
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "A"
             }
@@ -802,7 +802,7 @@ data:
               },
               "editorMode": "code",
               "expr": "node_load1{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
-              "legendFormat": "{{instance}} - 1m",
+              "legendFormat": "{{`{{instance}}`}} - 1m",
               "range": true,
               "refId": "A"
             },
@@ -813,7 +813,7 @@ data:
               },
               "expr": "node_load5{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
               "hide": true,
-              "legendFormat": "{{instance}} - 5m",
+              "legendFormat": "{{`{{instance}}`}} - 5m",
               "refId": "B"
             },
             {
@@ -823,7 +823,7 @@ data:
               },
               "expr": "node_load15{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
               "hide": true,
-              "legendFormat": "{{instance}} - 15m",
+              "legendFormat": "{{`{{instance}}`}} - 15m",
               "refId": "C"
             }
           ],
@@ -938,7 +938,7 @@ data:
               },
               "editorMode": "code",
               "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\".*\", cluster=\"$cluster\"} / node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\".*\", cluster=\"$cluster\"})",
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "A"
             }
@@ -1040,7 +1040,7 @@ data:
               },
               "editorMode": "code",
               "expr": "node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"} - node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"}",
-              "legendFormat": "{{instance}} - Used",
+              "legendFormat": "{{`{{instance}}`}} - Used",
               "range": true,
               "refId": "A"
             }
@@ -1155,7 +1155,7 @@ data:
               },
               "expr": "rate(node_disk_read_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\"}[$__rate_interval])",
               "intervalFactor": 1,
-              "legendFormat": "{{instance}}-{{device}} read",
+              "legendFormat": "{{`{{instance}}`}}-{{`{{device}}`}} read",
               "refId": "A"
             }
           ],
@@ -1256,7 +1256,7 @@ data:
               },
               "expr": "rate(node_disk_written_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\"}[$__rate_interval])",
               "intervalFactor": 1,
-              "legendFormat": "{{instance}}-{{device}} write",
+              "legendFormat": "{{`{{instance}}`}}-{{`{{device}}`}} write",
               "refId": "A"
             }
           ],
@@ -1638,7 +1638,7 @@ data:
               },
               "expr": "rate(node_network_receive_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device!=\"lo\"}[$__rate_interval]) * 8",
               "intervalFactor": 1,
-              "legendFormat": "{{instance}}-{{device}} RX",
+              "legendFormat": "{{`{{instance}}`}}-{{`{{device}}`}} RX",
               "refId": "A"
             }
           ],
@@ -1740,7 +1740,7 @@ data:
               },
               "expr": "rate(node_network_transmit_bytes_total{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\", device!=\"lo\"}[$__rate_interval]) * 8",
               "intervalFactor": 1,
-              "legendFormat": "{{instance}}-{{device}} TX",
+              "legendFormat": "{{`{{instance}}`}}-{{`{{device}}`}} TX",
               "refId": "A"
             }
           ],
