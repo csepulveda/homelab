@@ -1,2 +1,3 @@
 strimzi:
   replicas: 2
+  watchAnyNamespace: true
