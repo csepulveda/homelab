@@ -1,4 +1,6 @@
 cilium:
+  pmtuDiscovery:
+    enabled: true
   cluster:
     name: default
   externalIPs:
