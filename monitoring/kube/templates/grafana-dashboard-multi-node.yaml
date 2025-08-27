@@ -422,9 +422,9 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "avg(node_hwmon_temp_celsius{instance=\"192.168.100.154:9100\", chip=\"power_supply_bq27411_0\"}) by (instance)",
+              "expr": "avg(node_hwmon_temp_celsius{instance=\"192.168.100.154:9100\", chip=!\"power_supply_bq27411_0\"}) by (instance)",
               "hide": false,
-              "legendFormat": "{{`{{instance}}`}}-Battery",
+              "legendFormat": "{{`{{instance}}`}}-Phone",
               "range": true,
               "refId": "C"
             },
@@ -434,9 +434,9 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "avg(node_hwmon_temp_celsius{instance=\"192.168.100.154:9100\", chip!=\"power_supply_bq27411_0\"}) by (instance)",
+              "expr": ""node_power_supply_temp_celsius{instance=\"192.168.100.154:9100\", power_supply=\"bq27411-0\"}",
               "hide": false,
-              "legendFormat": "{{`{{instance}}`}}-Phone",
+              "legendFormat": "{{`{{instance}}`}}-Battery",
               "range": true,
               "refId": "A"
             }
