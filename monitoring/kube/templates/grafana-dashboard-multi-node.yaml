@@ -29,7 +29,7 @@ data:
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 1,
-      "id": 42,
+      "id": 1,
       "links": [],
       "panels": [
         {
@@ -107,7 +107,7 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
+            "w": 4,
             "x": 0,
             "y": 1
           },
@@ -200,8 +200,8 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
-            "x": 6,
+            "w": 5,
+            "x": 4,
             "y": 1
           },
           "id": 19,
@@ -298,8 +298,8 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
-            "x": 12,
+            "w": 5,
+            "x": 9,
             "y": 1
           },
           "id": 20,
@@ -396,8 +396,118 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
-            "x": 18,
+            "w": 5,
+            "x": 14,
+            "y": 1
+          },
+          "id": 22,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "12.1.0",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "avg(node_hwmon_temp_celsius{instance=\"192.168.100.154:9100\", chip=\"power_supply_bq27411_0\"}) by (instance)",
+              "hide": false,
+              "legendFormat": "{{`{{instance}}`}}-Battery",
+              "range": true,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "avg(node_hwmon_temp_celsius{instance=\"192.168.100.154:9100\", chip!=\"power_supply_bq27411_0\"}) by (instance)",
+              "hide": false,
+              "legendFormat": "{{`{{instance}}`}}-Phone",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "192.168.100.152:9100",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 5,
+            "x": 19,
             "y": 1
           },
           "id": 21,
@@ -483,7 +593,7 @@ data:
             "y": 9
           },
           "id": 15,
-          "maxPerRow": 4,
+          "maxPerRow": 6,
           "options": {
             "minVizHeight": 75,
             "minVizWidth": 75,
@@ -553,10 +663,10 @@ data:
             "h": 5,
             "w": 24,
             "x": 0,
-            "y": 14
+            "y": 19
           },
           "id": 16,
-          "maxPerRow": 4,
+          "maxPerRow": 6,
           "options": {
             "minVizHeight": 75,
             "minVizWidth": 75,
@@ -597,7 +707,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 19
+            "y": 29
           },
           "id": 1,
           "panels": [],
@@ -671,7 +781,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 20
+            "y": 30
           },
           "id": 2,
           "options": {
@@ -774,7 +884,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 20
+            "y": 30
           },
           "id": 3,
           "options": {
@@ -836,7 +946,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 28
+            "y": 38
           },
           "id": 4,
           "panels": [],
@@ -910,7 +1020,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 29
+            "y": 39
           },
           "id": 5,
           "options": {
@@ -1012,7 +1122,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 29
+            "y": 39
           },
           "id": 6,
           "options": {
@@ -1054,7 +1164,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 37
+            "y": 47
           },
           "id": 7,
           "panels": [],
@@ -1127,7 +1237,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 38
+            "y": 48
           },
           "id": 8,
           "options": {
@@ -1228,7 +1338,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 38
+            "y": 48
           },
           "id": 9,
           "options": {
@@ -1390,7 +1500,7 @@ data:
             "h": 10,
             "w": 24,
             "x": 0,
-            "y": 46
+            "y": 56
           },
           "id": 10,
           "options": {
@@ -1536,7 +1646,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 56
+            "y": 66
           },
           "id": 11,
           "panels": [],
@@ -1610,7 +1720,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 57
+            "y": 67
           },
           "id": 12,
           "options": {
@@ -1712,7 +1822,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 57
+            "y": 67
           },
           "id": 13,
           "options": {
@@ -1787,7 +1897,6 @@ data:
             "type": "query"
           },
           {
-            "allValue": "",
             "allowCustomValue": false,
             "current": {
               "text": [
@@ -1819,11 +1928,16 @@ data:
               },
               {
                 "selected": false,
+                "text": "192.168.100.154:9100",
+                "value": "192.168.100.154:9100"
+              },
+              {
+                "selected": false,
                 "text": "192.168.100.155:9100",
                 "value": "192.168.100.155:9100"
               }
             ],
-            "query": "192.168.100.150:9100, 192.168.100.151:9100, 192.168.100.152:9100, 192.168.100.155:9100",
+            "query": "192.168.100.150:9100, 192.168.100.151:9100, 192.168.100.152:9100, 192.168.100.154:9100, 192.168.100.155:9100",
             "type": "custom"
           }
         ]
@@ -1836,5 +1950,5 @@ data:
       "timezone": "browser",
       "title": "Multi-Node Exporter Dashboard",
       "uid": "multi-node-dashboard-001",
-      "version": 7
+      "version": 1
     }
