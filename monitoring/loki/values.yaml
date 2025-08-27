@@ -1,4 +1,6 @@
 loki:
+  test:
+    enabled: false
   lokiCanary:
     enabled: false
   global:
