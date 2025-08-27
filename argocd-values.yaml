@@ -10,3 +10,6 @@ server:
 configs:
   params:
     server.insecure: true
+global:
+  logging:
+    level: warn

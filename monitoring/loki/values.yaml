@@ -1,4 +1,6 @@
 loki:
+  lokiCanary:
+    enabled: false
   global:
     extraEnv:
     - name: AWS_ACCESS_KEY_ID

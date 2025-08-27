@@ -2,4 +2,6 @@ longhorn:
   metrics:
     serviceMonitor:
       enabled: true
+  defaultSettings:
+    logLevel: Warn
     
