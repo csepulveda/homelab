@@ -9,23 +9,23 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # - name: Install Helm
-      #   run: |
-      #     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-      #     helm version
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
 
-      # - name: Add ArgoCD repo
-      #   run: |
-      #     helm repo add argo https://argoproj.github.io/argo-helm
-      #     helm repo update
+      - name: Add ArgoCD repo
+        run: |
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo update
 
-      # - name: Install ArgoCD via Helm
-      #   run: |
-      #     helm upgrade --install argocd argo/argo-cd \
-      #       --namespace argocd \
-      #       --create-namespace \
-      #       -f argocd-values.yaml \
-      #       --wait
+      - name: Install ArgoCD via Helm
+        run: |
+          helm upgrade --install argocd argo/argo-cd \
+            --namespace argocd \
+            --create-namespace \
+            -f argocd-values.yaml \
+            --wait
 
       - uses: azure/setup-kubectl@v4
         id: install
