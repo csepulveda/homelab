@@ -434,7 +434,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": ""node_power_supply_temp_celsius{instance=\"192.168.100.154:9100\", power_supply=\"bq27411-0\"}",
+              "expr": "avg(node_power_supply_temp_celsius{instance=\"192.168.100.154:9100\", power_supply=\"bq27411-0\"}) by (instance)",
               "hide": false,
               "legendFormat": "{{`{{instance}}`}}-Battery",
               "range": true,
