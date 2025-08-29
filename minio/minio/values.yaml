@@ -7,8 +7,6 @@ minio:
   
   # Root credentials - using existing secret
   existingSecret: admin-creds
-  existingSecretUserKey: root-user
-  existingSecretPasswordKey: root-password
   
   # Resources
   resources:
