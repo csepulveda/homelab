@@ -1,16 +1,46 @@
 garage:
-  # Replication mode
-  replicationMode: 3
+  # Garage configuration
+  garage:
+    # Database engine
+    dbEngine: "lmdb"
+    
+    # Block size (1MB default)
+    blockSize: "1048576"
+    
+    # Replication mode
+    replicationMode: "3"
+    
+    # Compression level
+    compressionLevel: "1"
+    
+    # RPC configuration
+    rpcBindAddr: "[::]:3901"
+    
+    # S3 configuration
+    s3:
+      api:
+        region: "garage"
+        rootDomain: ".s3.csepulveda.net"
+      web:
+        rootDomain: ".web.csepulveda.net"
+        index: "index.html"
   
-  # Number of replicas
-  replicaCount: 3
+  # Deployment configuration
+  deployment:
+    kind: StatefulSet
+    replicaCount: 3
+    podManagementPolicy: OrderedReady
   
-  # Persistence configuration
+  # Data persistence
   persistence:
+    enabled: true
+    meta:
+      storageClass: iscsi
+      size: 1Gi
     data:
       storageClass: iscsi
-      size: 8Gi
-    
+      size: 32Gi
+  
   # Resources
   resources:
     requests:
@@ -28,60 +58,70 @@ garage:
         port: 3900
       web:
         port: 3902
-    admin:
-      port: 3903
   
   # Ingress configuration
   ingress:
-    enabled: true
-    className: cilium
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt
-      external-dns.alpha.kubernetes.io/target: router.csepulveda.net
-    hosts:
-      - host: s3.csepulveda.net
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: garage-s3-tls
+    s3:
+      api:
+        enabled: true
+        className: cilium
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt
+          external-dns.alpha.kubernetes.io/target: router.csepulveda.net
         hosts:
-          - s3.csepulveda.net
-  
-  # Web UI Ingress
-  webIngress:
-    enabled: true
-    className: nginx
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt
-    hosts:
-      - host: garage.csepulveda.net
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: garage-web-tls
+          - host: "s3.csepulveda.net"
+            paths:
+              - path: /
+                pathType: Prefix
+          - host: "*.s3.csepulveda.net"
+            paths:
+              - path: /
+                pathType: Prefix
+        tls:
+          - secretName: garage-s3-tls
+            hosts:
+              - s3.csepulveda.net
+              - "*.s3.csepulveda.net"
+      web:
+        enabled: true
+        className: nginx
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt
         hosts:
-          - garage.csepulveda.net
-  
-  # Admin ingress
-  adminIngress:
-    enabled: true
-    className: nginx
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt
-    hosts:
-      - host: garage-admin.csepulveda.net
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: garage-admin-tls
-        hosts:
-          - garage-admin.csepulveda.net
+          - host: "*.web.csepulveda.net"
+            paths:
+              - path: /
+                pathType: Prefix
+          - host: "garage.csepulveda.net"
+            paths:
+              - path: /
+                pathType: Prefix
+        tls:
+          - secretName: garage-web-tls
+            hosts:
+              - garage.csepulveda.net
+              - "*.web.csepulveda.net"
   
   # Monitoring
-  metrics:
-    enabled: true
-    serviceMonitor:
+  monitoring:
+    metrics:
       enabled: true
+      serviceMonitor:
+        enabled: true
+        interval: 15s
+        path: /metrics
+        
+  # Liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3903
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3903
+    initialDelaySeconds: 5
+    periodSeconds: 10
