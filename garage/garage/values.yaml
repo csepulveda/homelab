@@ -40,10 +40,10 @@ garage:
   # Resources
   resources:
     requests:
-      memory: 512Mi
+      memory: 256Mi
       cpu: 100m
     limits:
-      memory: 1Gi
+      memory: 768Mi
       cpu: 500m
   
   # Service configuration
