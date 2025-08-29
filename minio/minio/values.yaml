@@ -2,18 +2,17 @@ minio:
   # Mode: standalone
   mode: standalone
   
-  # Replicas for standalone mode
-  replicas: 1
-  
-  # Root credentials - using existing secret
-  existingSecret: admin-creds
+  # Root credentials - NO usar existingSecret porque las claves están mal
+  # Definir las credenciales directamente
+  rootUser: "admin"
+  rootPassword: "14dcd5d5ae4e"
   
   # Resources
   resources:
     requests:
       memory: 512Mi
   
-  # Persistence - single volume for standalone
+  # Persistence - para standalone
   persistence:
     enabled: true
     storageClass: iscsi
@@ -24,7 +23,11 @@ minio:
   service:
     type: ClusterIP
     port: 9000
-    consolePort: 9001
+  
+  # Console Service
+  consoleService:
+    type: ClusterIP
+    port: 9001
   
   # Ingress for MinIO API
   ingress:
