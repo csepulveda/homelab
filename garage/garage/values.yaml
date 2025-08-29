@@ -7,9 +7,9 @@ garage:
   
   # Persistence configuration
   persistence:
-    enabled: true
-    storageClass: iscsi
-    size: 32Gi
+    data:
+      storageClass: iscsi
+      size: 8Gi
     
   # Resources
   resources:
