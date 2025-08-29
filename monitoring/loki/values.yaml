@@ -30,8 +30,8 @@ loki:
         ruler: loki
         admin: loki
       s3:
-        endpoint: "http://minio.minio.svc.cluster.local:9000"
-        region: "us-east-1"
+        endpoint: "http://garage.garage.svc.cluster.local:9000"
+        region: "garage"
         s3ForcePathStyle: true
         insecure: true
     auth_enabled: false
