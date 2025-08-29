@@ -33,13 +33,9 @@ garage:
   
   # Data persistence
   persistence:
-    enabled: true
-    meta:
-      storageClass: iscsi
-      size: 1Gi
     data:
       storageClass: iscsi
-      size: 32Gi
+      size: 8Gi
   
   # Resources
   resources:
