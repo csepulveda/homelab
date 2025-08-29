@@ -1,6 +1,9 @@
 minio:
-  # Mode: standalone or distributed
+  # Mode: standalone
   mode: standalone
+  
+  # Replicas for standalone mode
+  replicas: 1
   
   # Root credentials - using existing secret
   existingSecret: admin-creds
@@ -12,7 +15,7 @@ minio:
     requests:
       memory: 512Mi
   
-  # Persistence
+  # Persistence - single volume for standalone
   persistence:
     enabled: true
     storageClass: iscsi
@@ -57,3 +60,8 @@ minio:
     serviceMonitor:
       enabled: true
       includeNode: true
+  
+  # Environment variables
+  environment:
+    MINIO_BROWSER: "on"
+    MINIO_BROWSER_REDIRECT_URL: "https://minio.csepulveda.net"
