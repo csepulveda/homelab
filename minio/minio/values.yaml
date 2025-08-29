@@ -1,28 +1,59 @@
 minio:
-  auth:
-    existingSecret: admin-creds
-  metrics:
+  # Mode: standalone or distributed
+  mode: standalone
+  
+  # Root credentials - using existing secret
+  existingSecret: admin-creds
+  existingSecretUserKey: root-user
+  existingSecretPasswordKey: root-password
+  
+  # Resources
+  resources:
+    requests:
+      memory: 512Mi
+  
+  # Persistence
+  persistence:
     enabled: true
-    serviceMonitor:
-      enabled: true
+    storageClass: iscsi
+    size: 32Gi
+    accessMode: ReadWriteOnce
+  
+  # Service
+  service:
+    type: ClusterIP
+    port: 9000
+    consolePort: 9001
+  
+  # Ingress for MinIO API
   ingress:
     enabled: true
-    hostname: s3.csepulveda.net
     ingressClassName: cilium
+    hosts:
+      - s3.csepulveda.net
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt
       external-dns.alpha.kubernetes.io/target: router.csepulveda.net
-    tls: true
-
-  console:
-    ingress:
-      enabled: true
-      hostname: minio.csepulveda.net
-      ingressClassName: nginx
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt
-      tls: true
+    tls:
+      - secretName: minio-api-tls
+        hosts:
+          - s3.csepulveda.net
   
-  persistence:
-    storageClass: iscsi
-    size: 32Gi
+  # Console Ingress
+  consoleIngress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - minio.csepulveda.net
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+    tls:
+      - secretName: minio-console-tls
+        hosts:
+          - minio.csepulveda.net
+  
+  # Metrics
+  metrics:
+    serviceMonitor:
+      enabled: true
+      includeNode: true
