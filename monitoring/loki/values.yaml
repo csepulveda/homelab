@@ -30,7 +30,7 @@ loki:
         ruler: loki
         admin: loki
       s3:
-        endpoint: "http://garage.garage.svc.cluster.local:9000"
+        endpoint: "http://garage.garage.svc.cluster.local:3900"
         region: "garage"
         s3ForcePathStyle: true
         insecure: true
