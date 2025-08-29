@@ -2,11 +2,11 @@ apiVersion: v2
 name: garage
 description: Install Garage S3-compatible storage
 type: application
-version: 1.0.0
-appVersion: 1.0.0
+version: 0.7.1
+appVersion: v1.2.0
 
 dependencies:
 - name: garage
-  version: "*"
-  repository: "https://git.deuxfleurs.fr/Deuxfleurs/garage/raw/branch/main/scripts/helm"
+  version: 0.7.1
+  repository: "https://helm.charliemaiors.dev"
   alias: garage
