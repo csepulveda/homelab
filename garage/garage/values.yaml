@@ -1,0 +1,65 @@
+garage:
+  replicationMode: "3"
+  
+  persistence:
+    enabled: true
+    storageClass: iscsi
+    size: 32Gi
+    
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 100m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+  
+  service:
+    type: ClusterIP
+    s3:
+      api:
+        port: 3900
+      web:
+        port: 3902
+    admin:
+      port: 3903
+    k2v:
+      api:
+        port: 3904
+  
+  ingress:
+    s3:
+      api:
+        enabled: true
+        className: cilium
+        host: s3.csepulveda.net
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt
+          external-dns.alpha.kubernetes.io/target: router.csepulveda.net
+        tls:
+          enabled: true
+      web:
+        enabled: true
+        className: nginx
+        host: garage.csepulveda.net
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt
+        tls:
+          enabled: true
+  
+  admin:
+    enabled: true
+    ingress:
+      enabled: true
+      className: nginx
+      host: garage-admin.csepulveda.net
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      tls:
+        enabled: true
+  
+  monitoring:
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
