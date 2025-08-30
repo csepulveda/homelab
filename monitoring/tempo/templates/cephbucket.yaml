@@ -1,0 +1,8 @@
+apiVersion: ceph.rook.io/v1
+kind: CephBucket
+metadata:
+  name: tempo-bucket
+  namespace: monitoring
+spec:
+  clusterNamespace: rook-ceph
+  objectStoreName: ceph-objectstore

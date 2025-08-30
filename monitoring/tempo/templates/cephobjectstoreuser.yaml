@@ -1,0 +1,15 @@
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: tempo-s3-user
+  namespace: monitoring
+spec:
+  store: ceph-objectstore
+  clusterNamespace: rook-ceph
+  displayName: "Tempo S3 User"
+  capabilities:
+    user: "*"
+    bucket: "*"
+    zone: "*"
+    usage: "*"
+    metadata: "*"
