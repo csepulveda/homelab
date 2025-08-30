@@ -55,12 +55,6 @@ spec:
     allowUninstallWithVolumes: false
   placement:
     all:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-            - key: node-role.kubernetes.io/control-plane
-              operator: DoesNotExist
       tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/control-plane
@@ -133,20 +127,8 @@ spec:
       tuneDeviceClass: true
       tuneFastDeviceClass: false
       encrypted: false
-      placement:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-role.kubernetes.io/control-plane
-                operator: DoesNotExist
-      preparePlacement:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-role.kubernetes.io/control-plane
-                operator: DoesNotExist
+      placement: {}
+      preparePlacement: {}
       resources:
         limits:
           memory: "4Gi"
