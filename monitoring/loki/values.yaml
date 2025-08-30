@@ -46,6 +46,10 @@ loki:
     auth_enabled: false
     commonConfig:
       replication_factor: 2
+    ingesterConfig:
+      chunk_target_size: 102400    # 100KB (más pequeño)
+      chunk_idle_period: 5m       # 5 min (más rápido)
+      max_chunk_age: 10m          # 10 min (más rápido)
   minio:
     enabled: false
   read:
