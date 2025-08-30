@@ -37,13 +37,13 @@ loki:
     persistence:
       storageClass: iscsi
     extraArgs:
-    - -log.level=error
+    - -log.level=info
   backend:
     replicas: 2
     persistence:
       storageClass: iscsi
     extraArgs:
-    - -log.level=error
+    - -log.level=info
   gateway:
     replicas: 2
     extraArgs:
