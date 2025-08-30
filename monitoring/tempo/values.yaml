@@ -16,7 +16,7 @@ tempo:
       trace:
         backend: s3
         s3:
-          endpoint: http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80
+          endpoint: rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80
           bucket: tempo-bucket
           region: us-east-1
           forcepathstyle: true
