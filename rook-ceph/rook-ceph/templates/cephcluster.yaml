@@ -38,8 +38,6 @@ spec:
       requireMsgr2: false
     ipFamily: "IPv4"
     dualStack: false
-  rbdMirroring:
-    workers: 0
   crashCollector:
     disable: false
   logCollector:
