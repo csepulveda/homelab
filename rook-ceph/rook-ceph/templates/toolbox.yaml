@@ -16,11 +16,12 @@ spec:
         app: rook-ceph-tools
     spec:
       dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: rook-ceph-default
       containers:
       - name: rook-ceph-tools
-        image: quay.io/ceph/ceph:v18.2.4
+        image: rook/ceph:v1.15.5
         command: ["/bin/bash"]
-        args: ["-c", "sleep infinity"]
+        args: ["-m", "-c", "/usr/local/bin/toolbox.sh"]
         env:
           - name: ROOK_CEPH_USERNAME
             valueFrom:
@@ -39,8 +40,7 @@ spec:
             mountPath: /etc/rook
       volumes:
         - name: ceph-config
-          configMap:
-            name: rook-ceph-config
+          emptyDir: {}
         - name: mon-endpoint-volume
           configMap:
             name: rook-ceph-mon-endpoints
