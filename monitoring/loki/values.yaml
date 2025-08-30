@@ -28,17 +28,29 @@ loki:
   loki:
     image:
       tag: 3.5.1
-    storage:
-      type: s3
-      bucketNames:
-        chunks: ${BUCKET_NAME}
-        ruler: ${BUCKET_NAME}
-        admin: ${BUCKET_NAME}
-      s3:
-        endpoint: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80"
-        region: "us-east-1"
-        s3ForcePathStyle: true
-        insecure: true
+    config: |
+      chunk_store_config:
+        chunk_cache_config:
+          embedded_cache:
+            enabled: true
+            max_size_mb: 100
+      storage_config:
+        aws:
+          endpoint: "$(BUCKET_HOST):$(BUCKET_PORT)"
+          region: us-east-1
+          s3forcepathstyle: true
+          insecure: true
+          bucketnames: $(BUCKET_NAME)
+        boltdb_shipper:
+          active_index_directory: /loki/boltdb-shipper-active
+          cache_location: /loki/boltdb-shipper-cache
+          cache_ttl: 24h
+          shared_store: s3
+        tsdb_shipper:
+          active_index_directory: /loki/tsdb-shipper-active
+          cache_location: /loki/tsdb-shipper-cache
+          cache_ttl: 24h
+          shared_store: s3
     auth_enabled: false
     commonConfig:
       replication_factor: 2
