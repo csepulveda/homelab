@@ -5,7 +5,7 @@ metadata:
   namespace: monitoring
 spec:
   bucketName: tempo-bucket
-  generateBucketName: tempo-bucket
+  generateBucketName:
   storageClassName: rook-ceph-bucket
   additionalConfig:
     maxObjects: "1000"

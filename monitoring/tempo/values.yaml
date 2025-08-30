@@ -11,18 +11,13 @@ tempo:
         secretKeyRef:
           name: tempo-bucket
           key: AWS_SECRET_ACCESS_KEY
-    - name: BUCKET_NAME
-      valueFrom:
-        configMapKeyRef:
-          name: tempo-bucket
-          key: BUCKET_NAME
   config: |
     storage:
       trace:
         backend: s3
         s3:
-          endpoint: $(BUCKET_HOST):$(BUCKET_PORT)
-          bucket: $(BUCKET_NAME)
+          endpoint: http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80
+          bucket: tempo-bucket
           region: us-east-1
           forcepathstyle: true
           insecure: true

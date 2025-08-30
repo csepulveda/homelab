@@ -15,9 +15,9 @@ loki:
     storage:
       type: s3
       bucketNames:
-        chunks: loki-8ba2db15-9a23-4961-88f8-4cac58ef9c62
-        ruler: loki-8ba2db15-9a23-4961-88f8-4cac58ef9c62
-        admin: loki-8ba2db15-9a23-4961-88f8-4cac58ef9c62
+        chunks: loki-bucket
+        ruler: loki-bucket
+        admin: loki-bucket
       s3:
         endpoint: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80"
         region: "us-east-1"
