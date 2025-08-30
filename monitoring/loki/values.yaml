@@ -15,6 +15,21 @@ loki:
         secretKeyRef:
           name: loki-bucket
           key: AWS_SECRET_ACCESS_KEY
+    - name: BUCKET_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: loki-bucket
+          key: BUCKET_NAME
+    - name: BUCKET_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: loki-bucket
+          key: BUCKET_HOST
+    - name: BUCKET_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: loki-bucket
+          key: BUCKET_PORT
   monitoring:
     dashboards:
       enabled: true
@@ -26,11 +41,11 @@ loki:
     storage:
       type: s3
       bucketNames:
-        chunks: loki-bucket
-        ruler: loki-bucket
-        admin: loki-bucket
+        chunks: $(BUCKET_NAME)
+        ruler: $(BUCKET_NAME)
+        admin: $(BUCKET_NAME)
       s3:
-        endpoint: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local"
+        endpoint: "http://$(BUCKET_HOST):$(BUCKET_PORT)"
         region: "us-east-1"
         s3ForcePathStyle: true
         insecure: true

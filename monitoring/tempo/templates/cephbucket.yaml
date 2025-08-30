@@ -1,11 +1,11 @@
 apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
 metadata:
-  name: loki-bucket
+  name: tempo-bucket
   namespace: monitoring
 spec:
-  bucketName:
-  generateBucketName: loki-bucket
+  bucketName: tempo-bucket
+  generateBucketName: tempo-bucket
   storageClassName: rook-ceph-bucket
   additionalConfig:
     maxObjects: "1000"
