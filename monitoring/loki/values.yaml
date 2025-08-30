@@ -41,11 +41,11 @@ loki:
     storage:
       type: s3
       bucketNames:
-        chunks: $(BUCKET_NAME)
-        ruler: $(BUCKET_NAME)
-        admin: $(BUCKET_NAME)
+        chunks: ${BUCKET_NAME}
+        ruler: ${BUCKET_NAME}
+        admin: ${BUCKET_NAME}
       s3:
-        endpoint: "http://$(BUCKET_HOST):$(BUCKET_PORT)"
+        endpoint: "http://${BUCKET_HOST}:${BUCKET_PORT}"
         region: "us-east-1"
         s3ForcePathStyle: true
         insecure: true

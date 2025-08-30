@@ -30,8 +30,8 @@ tempo:
     trace:
       backend: s3
       s3:
-        endpoint: $(BUCKET_HOST):$(BUCKET_PORT)
-        bucket: $(BUCKET_NAME)
+        endpoint: ${BUCKET_HOST}:${BUCKET_PORT}
+        bucket: ${BUCKET_NAME}
         region: us-east-1
         forcepathstyle: true
         insecure: true
