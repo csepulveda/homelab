@@ -36,7 +36,4 @@ spec:
       requests:
         cpu: "100m"
         memory: "512Mi"
-  healthCheck:
-    bucket:
-      disabled: false
-      interval: 60s
+  healthCheck: {}
