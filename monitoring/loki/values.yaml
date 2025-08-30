@@ -34,6 +34,15 @@ loki:
         chunks: dummy-will-be-overridden
         ruler: dummy-will-be-overridden  
         admin: dummy-will-be-overridden
+    schemaConfig:
+      configs:
+      - from: "2024-10-09"
+        index:
+          period: 24h
+          prefix: loki_index_
+        object_store: s3
+        schema: v13
+        store: tsdb
     config: |
       auth_enabled: false
       common:
