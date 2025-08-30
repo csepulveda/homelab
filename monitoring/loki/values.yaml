@@ -8,13 +8,13 @@ loki:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
-          name: loki-s3-secret
-          key: AWS_ACCESS_KEY_ID
+          name: rook-ceph-object-user-ceph-objectstore-loki-s3-user
+          key: AccessKey
     - name: AWS_SECRET_ACCESS_KEY
       valueFrom:
         secretKeyRef:
-          name: loki-s3-secret
-          key: AWS_SECRET_ACCESS_KEY
+          name: rook-ceph-object-user-ceph-objectstore-loki-s3-user
+          key: SecretKey
   monitoring:
     dashboards:
       enabled: true
@@ -30,8 +30,8 @@ loki:
         ruler: loki
         admin: loki
       s3:
-        endpoint: "http://garage.garage.svc.cluster.local:3900"
-        region: "garage"
+        endpoint: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local"
+        region: "us-east-1"
         s3ForcePathStyle: true
         insecure: true
     auth_enabled: false

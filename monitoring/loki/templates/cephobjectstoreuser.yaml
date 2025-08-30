@@ -1,0 +1,12 @@
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: loki-s3-user
+  namespace: monitoring
+spec:
+  store: ceph-objectstore
+  clusterNamespace: rook-ceph
+  displayName: "Loki S3 User"
+  capabilities:
+    user: "*"
+    bucket: "*"

@@ -1,0 +1,23 @@
+rook-ceph:
+  crds:
+    enabled: true
+  
+  monitoring:
+    enabled: false
+  
+  csi:
+    enableRbdDriver: false
+    enableCephfsDriver: false
+    enableNFSDriver: false
+    enableCephfsSnapshotter: false
+    enableRBDSnapshotter: false
+    enableVolumeReplication: false
+  
+  enableDiscoveryDaemon: true
+  
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi

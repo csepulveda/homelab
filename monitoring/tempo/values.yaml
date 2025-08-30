@@ -1,2 +1,32 @@
 tempo:
-  foo: bar
+  global:
+    extraEnv:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: rook-ceph-object-user-ceph-objectstore-tempo-s3-user
+          key: AccessKey
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: rook-ceph-object-user-ceph-objectstore-tempo-s3-user
+          key: SecretKey
+  storage:
+    trace:
+      backend: s3
+      s3:
+        endpoint: rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80
+        bucket: tempo
+        region: us-east-1
+        forcepathstyle: true
+        insecure: true
+  metaMonitoring:
+    serviceMonitor:
+      enabled: true
+  tempo:
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: 100m
+        memory: 512Mi
