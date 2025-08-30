@@ -3,51 +3,22 @@ loki:
     enabled: false
   lokiCanary:
     enabled: false
-  global:
-    extraEnv:
-    - name: AWS_ACCESS_KEY_ID
-      valueFrom:
-        secretKeyRef:
-          name: loki-bucket
-          key: AWS_ACCESS_KEY_ID
-    - name: AWS_SECRET_ACCESS_KEY
-      valueFrom:
-        secretKeyRef:
-          name: loki-bucket
-          key: AWS_SECRET_ACCESS_KEY
-    - name: BUCKET_NAME
-      valueFrom:
-        configMapKeyRef:
-          name: loki-bucket
-          key: BUCKET_NAME
   monitoring:
     dashboards:
       enabled: true
     serviceMonitor:
-      enabled: true
+      enabled: true  
   loki:
     image:
       tag: 3.5.1
+    useTestSchema: true
     storage:
       type: s3
-      bucketNames:
-        chunks: '{{ (lookup "v1" "ConfigMap" "monitoring" "loki-bucket").data.BUCKET_NAME }}'
-        ruler: '{{ (lookup "v1" "ConfigMap" "monitoring" "loki-bucket").data.BUCKET_NAME }}'
-        admin: '{{ (lookup "v1" "ConfigMap" "monitoring" "loki-bucket").data.BUCKET_NAME }}'
       s3:
-        endpoint: 'http://{{ (lookup "v1" "ConfigMap" "monitoring" "loki-bucket").data.BUCKET_HOST }}:{{ (lookup "v1" "ConfigMap" "monitoring" "loki-bucket").data.BUCKET_PORT }}'
+        endpoint: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80"
         region: "us-east-1"
         s3ForcePathStyle: true
         insecure: true
-    schemaConfig:
-      configs:
-      - from: "2024-10-09"
-        index:
-          period: 24h
-          prefix: loki_index_
-        object_store: s3
-        schema: v13
-        store: tsdb
     auth_enabled: false
     commonConfig:
       replication_factor: 2
