@@ -4,6 +4,8 @@ metadata:
   name: ceph-objectstore
   namespace: rook-ceph
 spec:
+  allowUsersInNamespaces:
+    - monitoring
   metadataPool:
     failureDomain: host
     replicated:
