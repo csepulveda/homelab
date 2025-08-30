@@ -7,7 +7,19 @@ loki:
     dashboards:
       enabled: true
     serviceMonitor:
-      enabled: true  
+      enabled: true
+  global:
+    extraEnv:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: loki-bucket
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: loki-bucket
+          key: AWS_SECRET_ACCESS_KEY
   loki:
     image:
       tag: 3.5.1
