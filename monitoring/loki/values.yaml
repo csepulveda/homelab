@@ -11,7 +11,6 @@ loki:
   loki:
     image:
       tag: 3.5.1
-    useTestSchema: true
     storage:
       type: s3
       bucketNames:
@@ -23,6 +22,15 @@ loki:
         region: "us-east-1"
         s3ForcePathStyle: true
         insecure: true
+    schemaConfig:
+      configs:
+      - from: 2024-01-01
+        store: tsdb
+        object_store: s3
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
     auth_enabled: false
     commonConfig:
       replication_factor: 2
