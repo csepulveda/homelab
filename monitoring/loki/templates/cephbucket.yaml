@@ -1,4 +1,4 @@
-apiVersion: ceph.rook.io/v1
+apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
 metadata:
   name: loki-bucket
