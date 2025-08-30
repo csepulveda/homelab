@@ -4,8 +4,8 @@ metadata:
   name: loki-bucket
   namespace: monitoring
 spec:
-  bucketName:
-  generateBucketName: loki
+  bucketName: loki-bucket
+  generateBucketName: loki-bucket
   storageClassName: rook-ceph-bucket
   additionalConfig:
     maxObjects: "1000"
