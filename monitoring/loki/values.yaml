@@ -28,15 +28,19 @@ loki:
   loki:
     image:
       tag: 3.5.1
+    storage:
+      type: s3
+      bucketNames:
+        chunks: dummy-will-be-overridden
+        ruler: dummy-will-be-overridden  
+        admin: dummy-will-be-overridden
     config: |
-      chunk_store_config:
-        chunk_cache_config:
-          embedded_cache:
-            enabled: true
-            max_size_mb: 100
+      auth_enabled: false
+      common:
+        replication_factor: 2
       storage_config:
         aws:
-          endpoint: "$(BUCKET_HOST):$(BUCKET_PORT)"
+          endpoint: $(BUCKET_HOST):$(BUCKET_PORT)
           region: us-east-1
           s3forcepathstyle: true
           insecure: true
@@ -51,18 +55,15 @@ loki:
           cache_location: /loki/tsdb-shipper-cache
           cache_ttl: 24h
           shared_store: s3
-    auth_enabled: false
-    commonConfig:
-      replication_factor: 2
-    schemaConfig:
-      configs:
-      - from: "2024-10-09"
-        index:
-          period: 24h
-          prefix: loki_index_
-        object_store: s3
-        schema: v13
-        store: tsdb
+      schema_config:
+        configs:
+        - from: "2024-10-09"
+          index:
+            period: 24h
+            prefix: loki_index_
+          object_store: s3
+          schema: v13
+          store: tsdb
   minio:
     enabled: false
   read:
