@@ -8,13 +8,13 @@ loki:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
-          name: rook-ceph-object-user-ceph-objectstore-loki-s3-user
-          key: AccessKey
+          name: loki-bucket
+          key: AWS_ACCESS_KEY_ID
     - name: AWS_SECRET_ACCESS_KEY
       valueFrom:
         secretKeyRef:
-          name: rook-ceph-object-user-ceph-objectstore-loki-s3-user
-          key: SecretKey
+          name: loki-bucket
+          key: AWS_SECRET_ACCESS_KEY
   monitoring:
     dashboards:
       enabled: true

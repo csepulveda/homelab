@@ -4,13 +4,13 @@ tempo:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
-          name: rook-ceph-object-user-ceph-objectstore-tempo-s3-user
-          key: AccessKey
+          name: tempo-bucket
+          key: AWS_ACCESS_KEY_ID
     - name: AWS_SECRET_ACCESS_KEY
       valueFrom:
         secretKeyRef:
-          name: rook-ceph-object-user-ceph-objectstore-tempo-s3-user
-          key: SecretKey
+          name: tempo-bucket
+          key: AWS_SECRET_ACCESS_KEY
   storage:
     trace:
       backend: s3
