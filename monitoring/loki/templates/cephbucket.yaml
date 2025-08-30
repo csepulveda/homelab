@@ -1,8 +1,14 @@
 apiVersion: ceph.rook.io/v1
-kind: CephBucket
+kind: ObjectBucketClaim
 metadata:
   name: loki-bucket
   namespace: monitoring
 spec:
-  clusterNamespace: rook-ceph
-  objectStoreName: ceph-objectstore
+  bucketName:
+  generateBucketName: loki
+  storageClassName: rook-ceph-bucket
+  additionalConfig:
+    maxObjects: "1000"
+    maxSize: "2G"
+    bucketMaxObjects: "3000"
+    bucketMaxSize: "4G"
