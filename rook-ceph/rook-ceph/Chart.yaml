@@ -2,10 +2,15 @@ apiVersion: v2
 name: rook-ceph
 description: Rook Ceph Operator for Object Storage
 type: application
-version: 1.1.0
-appVersion: v1.15.5
+version: 1.18.1
+appVersion: v1.18.1
 
 dependencies:
 - name: rook-ceph
   version: v1.18.1
   repository: "https://charts.rook.io/release"
+  alias: operator
+- name: rook-ceph-cluster
+  version: v1.18.1
+  repository: "https://charts.rook.io/release"
+  alias: cluster
