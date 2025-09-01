@@ -19,6 +19,8 @@ trivy-operator:
       readOnlyRootFilesystem: false
     # CLAVE: Habilitar servidor trivy para cache por digest
     builtInTrivyServer: true
+    # Excluir imágenes que causan OOM constantemente
+    excludeImages: "nvidia/*,*/nvidia-*,*driver*"
 
   resources:
     requests:
@@ -32,10 +34,10 @@ trivy-operator:
     resources:
       requests:
         cpu: 200m
-        memory: 2Gi
+        memory: 4Gi
       limits:
         cpu: 2
-        memory: 2Gi
+        memory: 6Gi
 
     ignoreUnfixed: true
     imageScanCacheDir: "/var/lib/trivy-cache"
