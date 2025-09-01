@@ -11,16 +11,21 @@ trivy-operator:
 
   resources:
     requests:
-      cpu: 200m
-      memory: 2Gi
-    limits:
-      cpu: 2
-      memory: 4Gi
+      cpu: 100m
+      memory: 1Gi
 
   serviceMonitor:
     enabled: true
   
   trivy:
+    resources:
+      request:
+        cpu: 100m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 2Gi
+
     ignoreUnfixed: true
     # Configuración adicional para optimizar cache
     cacheDir: "/tmp/trivy/.cache"
