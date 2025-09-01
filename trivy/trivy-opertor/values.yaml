@@ -36,9 +36,13 @@ trivy-operator:
         memory: 2Gi
 
     ignoreUnfixed: true
-    cacheDir: "/tmp/trivy/.cache"
-    cacheBackend: "redis"
-    serverAddr: ""
+    cacheDir: "/home/scanner/.cache"
     skipUpdate: true
     quiet: true
     noProgress: true
+    
+    persistence:
+      enabled: true
+      size: "5Gi"
+      storageClass: "longhorn"
+      accessMode: ReadWriteOnce
