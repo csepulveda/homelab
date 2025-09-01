@@ -45,8 +45,12 @@ cluster:
           secretName: admin-ceph-tls
       ingressClassName: nginx
   
-  # Configuración del CephCluster
+  # Configuración del CephCluster  
   cephClusterSpec:
+    # Configuración adicional para RGW
+    cephConfig:
+      client.rgw:
+        rgw_dns_name: "s3.csepulveda.net"
     cephVersion:
       image: quay.io/ceph/ceph:v18.2.4
       allowUnsupported: false
@@ -234,6 +238,9 @@ cluster:
       enabled: true
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
+        nginx.ingress.kubernetes.io/proxy-body-size: "0"
+        nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+        nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
       host:
         name: s3.csepulveda.net
         path: /
@@ -264,6 +271,7 @@ cluster:
         port: 80
         instances: 2
         priorityClassName: system-cluster-critical
+        hostNetwork: false
         placement:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
