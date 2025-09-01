@@ -1,18 +1,4 @@
-rook-ceph:
-  ingress:
-    dashboard:
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt
-      host:
-        name: admin-ceph.csepulveda.net
-        path: /
-        pathType: Prefix
-      tls:
-        - hosts:
-          - admin-ceph.csepulveda.net
-          secretName: admin-ceph-tls
-      ingressclassName: nginx
-
+operator:
   crds:
     enabled: true
   
@@ -35,3 +21,262 @@ rook-ceph:
     requests:
       cpu: 100m
       memory: 128Mi
+
+cluster:
+  operatorNamespace: rook-ceph
+  
+  # Configuración del Ingress
+  ingress:
+    dashboard:
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      host:
+        name: admin-ceph.csepulveda.net
+        path: /
+        pathType: Prefix
+      tls:
+        - hosts:
+          - admin-ceph.csepulveda.net
+          secretName: admin-ceph-tls
+      ingressClassName: nginx
+  
+  # Configuración del CephCluster
+  cephClusterSpec:
+    cephVersion:
+      image: quay.io/ceph/ceph:v18.2.4
+      allowUnsupported: false
+    dataDirHostPath: /var/lib/rook
+    skipUpgradeChecks: false
+    continueUpgradeAfterChecksEvenIfNotHealthy: false
+    waitTimeoutForHealthyOSDInMinutes: 10
+    
+    mon:
+      count: 3
+      allowMultiplePerNode: true
+      volumeClaimTemplate:
+        spec:
+          storageClassName: iscsi
+          resources:
+            requests:
+              storage: 5Gi
+    
+    mgr:
+      count: 2
+      allowMultiplePerNode: false
+      modules:
+        - name: rook
+          enabled: true
+    
+    dashboard:
+      enabled: true
+      ssl: true
+    
+    network:
+      connections:
+        encryption:
+          enabled: false
+        compression:
+          enabled: false
+        requireMsgr2: false
+      ipFamily: "IPv4"
+      dualStack: false
+    
+    crashCollector:
+      disable: false
+    
+    logCollector:
+      enabled: true
+      periodicity: daily
+      maxLogSize: 500M
+    
+    cleanupPolicy:
+      confirmation: ""
+      sanitizeDisks:
+        method: quick
+        dataSource: zero
+        iteration: 1
+      allowUninstallWithVolumes: false
+    
+    placement:
+      all:
+        tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
+    
+    annotations: {}
+    
+    labels:
+      all:
+        rook.io/cluster: rook-ceph
+      mgr:
+        rook.io/cluster: rook-ceph
+    
+    resources:
+      mgr:
+        limits:
+          memory: "1Gi"
+        requests:
+          cpu: "100m"
+          memory: "512Mi"
+      mon:
+        limits:
+          memory: "2Gi"
+        requests:
+          cpu: "100m"
+          memory: "512Mi"
+      osd:
+        limits:
+          memory: "4Gi"
+        requests:
+          cpu: "100m"
+          memory: "2Gi"
+      prepareosd:
+        limits:
+          memory: "400Mi"
+        requests:
+          cpu: "100m"
+          memory: "50Mi"
+      mgr-sidecar:
+        limits:
+          memory: "100Mi"
+        requests:
+          cpu: "50m"
+          memory: "40Mi"
+      crashcollector:
+        limits:
+          memory: "60Mi"
+        requests:
+          cpu: "10m"
+          memory: "30Mi"
+      logcollector:
+        limits:
+          memory: "1Gi"
+        requests:
+          cpu: "50m"
+          memory: "100Mi"
+      cleanup:
+        limits:
+          memory: "1Gi"
+        requests:
+          cpu: "100m"
+          memory: "100Mi"
+    
+    removeOSDsIfOutAndSafeToRemove: false
+    
+    priorityClassNames:
+      mon: system-node-critical
+      osd: system-node-critical
+      mgr: system-cluster-critical
+    
+    storage:
+      storageClassDeviceSets:
+      - name: set1
+        count: 3
+        portable: true
+        tuneDeviceClass: true
+        tuneFastDeviceClass: false
+        encrypted: false
+        placement: {}
+        preparePlacement: {}
+        resources:
+          limits:
+            memory: "4Gi"
+          requests:
+            cpu: "100m"
+            memory: "2Gi"
+        volumeClaimTemplates:
+        - metadata:
+            name: data
+          spec:
+            resources:
+              requests:
+                storage: 20Gi
+            storageClassName: iscsi
+            volumeMode: Block
+            accessModes:
+              - ReadWriteOnce
+      onlyApplyOSDPlacement: false
+    
+    disruptionManagement:
+      managePodBudgets: true
+      osdMaintenanceTimeout: 30
+      pgHealthCheckTimeout: 0
+    
+    healthCheck:
+      daemonHealth:
+        mon:
+          disabled: false
+          interval: 45s
+        osd:
+          disabled: false
+          interval: 60s
+        status:
+          disabled: false
+          interval: 60s
+      livenessProbe:
+        mon:
+          disabled: false
+        mgr:
+          disabled: false
+        osd:
+          disabled: false
+  
+  # Configuración del CephObjectStore
+  cephObjectStores:
+  - name: ceph-objectstore
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      host:
+        name: s3.csepulveda.net
+        path: /
+      tls:
+        - hosts:
+          - s3.csepulveda.net
+          secretName: s3-ceph-tls
+      ingressClassName: nginx
+    spec:
+      allowUsersInNamespaces:
+        - monitoring
+      metadataPool:
+        failureDomain: host
+        replicated:
+          size: 3
+          requireSafeReplicaSize: true
+        parameters:
+          compression_mode: none
+      dataPool:
+        failureDomain: host
+        replicated:
+          size: 3
+          requireSafeReplicaSize: true
+        parameters:
+          compression_mode: none
+      preservePoolsOnDelete: false
+      gateway:
+        port: 80
+        instances: 2
+        priorityClassName: system-cluster-critical
+        placement:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: DoesNotExist
+        resources:
+          limits:
+            memory: "2Gi"
+          requests:
+            cpu: "100m"
+            memory: "512Mi"
+      healthCheck: {}
+    storageClass:
+      enabled: true
+      name: rook-ceph-bucket
+      reclaimPolicy: Delete
+      parameters:
+        objectStoreName: ceph-objectstore
+        objectStoreNamespace: rook-ceph
