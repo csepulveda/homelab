@@ -4,7 +4,7 @@ trivy-operator:
     cacheReportTTL: "240h"
     scannerReportTTL: 240h
     scanJobTimeout: 20m
-    scanJobsConcurrentLimit: 2
+    scanJobsConcurrentLimit: 1
     batchDeleteLimit: 5
     batchDeleteDelay: "30s"
     scanOnlyCurrentRevisions: true
@@ -12,16 +12,16 @@ trivy-operator:
   resources:
     requests:
       cpu: 100m
-      memory: 1Gi
+      memory: 512Mi
 
   serviceMonitor:
     enabled: true
   
   trivy:
     resources:
-      request:
+      requests:
         cpu: 100m
-        memory: 1Gi
+        memory: 2Gi
       limits:
         cpu: 2
         memory: 2Gi
