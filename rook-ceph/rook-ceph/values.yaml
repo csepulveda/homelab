@@ -185,23 +185,40 @@ cluster:
       mgr: system-cluster-critical
     
     storage:
-      # Configuración estricta para usar SOLO los discos iSCSI
+      # IMPORTANTE: Solo usar PVCs, NO detectar discos locales
       useAllNodes: false
       useAllDevices: false
-      # Especificar nodos permitidos
-      nodes:
-      - name: node01
-      - name: mode02
-      - name: node03
+      # NO especificar nodes cuando usas storageClassDeviceSets
+      # Los PVCs se crearán donde el scheduler de k8s decida
       storageClassDeviceSets:
       - name: set1
         count: 3
-        portable: false  # No portable para mantener OSDs en nodos específicos
-        tuneDeviceClass: true
+        portable: true  # Portable porque usamos PVCs
+        tuneDeviceClass: false  # No necesario con PVCs
         tuneFastDeviceClass: false
         encrypted: false
-        placement: {}
-        preparePlacement: {}
+        placement:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - node01
+                  - mode02
+                  - node03
+        preparePlacement:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - node01
+                  - mode02
+                  - node03
         resources:
           limits:
             memory: "4Gi"
