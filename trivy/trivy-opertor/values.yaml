@@ -3,10 +3,8 @@ trivy-operator:
   operator:
     cacheReportTTL: 240h
     scannerReportTTL: 240h
-    scanJobTimeout: 20m
+    scanJobTimeout: 30m
     scanJobsConcurrentLimit: 1
-    batchDeleteLimit: 5
-    batchDeleteDelay: "30s"
     scanOnlyCurrentRevisions: true
     vulnerabilityScannerScanOnlyCurrentRevisions: true
     configAuditScannerScanOnlyCurrentRevisions: true
@@ -17,7 +15,9 @@ trivy-operator:
           - ALL
       privileged: false
       readOnlyRootFilesystem: false
+      runAsNonRoot: false
     builtInTrivyServer: true
+    excludeImages: "nvidia/*,*/nvidia-*,*driver*"
 
   resources:
     requests:
@@ -31,7 +31,7 @@ trivy-operator:
     resources:
       requests:
         cpu: 100m
-        memory: 2Gi
+        memory: 1Gi
       limits:
         cpu: 1
         memory: 3Gi
@@ -39,6 +39,8 @@ trivy-operator:
     ignoreUnfixed: true
     imageScanCacheDir: "/var/lib/trivy-cache"
     clientServerSkipUpdate: true
+    timeout: "20m"
+    offlineScan: false
 
     storageClassEnabled: true
     storageClassName: "longhorn"
