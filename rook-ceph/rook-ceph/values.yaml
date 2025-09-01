@@ -15,7 +15,7 @@ operator:
     enableRBDSnapshotter: false
     enableVolumeReplication: false
   
-  enableDiscoveryDaemon: true
+  enableDiscoveryDaemon: false  # Deshabilitado para evitar detección automática de discos
   
   resources:
     limits:
