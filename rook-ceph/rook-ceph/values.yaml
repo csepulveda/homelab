@@ -73,7 +73,7 @@ cluster:
     resources:
       mgr:
         limits:
-          memory: "512Mi"
+          memory: "2Gi"
         requests:
           cpu: "50m"
           memory: "256Mi"
