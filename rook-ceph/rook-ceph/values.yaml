@@ -32,6 +32,9 @@ cluster:
     dashboard:
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/ssl-verify: "false"
       host:
         name: admin-ceph.csepulveda.net
         path: /
