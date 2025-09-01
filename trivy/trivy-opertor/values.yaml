@@ -1,7 +1,7 @@
 trivy-operator:
   excludeNamespaces: default
   operator:
-    cacheReportTTL: "240h"
+    cacheReportTTL: 240h
     scannerReportTTL: 240h
     scanJobTimeout: 20m
     scanJobsConcurrentLimit: 1
@@ -17,10 +17,7 @@ trivy-operator:
           - ALL
       privileged: false
       readOnlyRootFilesystem: false
-    # CLAVE: Habilitar servidor trivy para cache por digest
     builtInTrivyServer: true
-    # Excluir imágenes que causan OOM constantemente
-    excludeImages: "nvidia/*,*/nvidia-*,*driver*"
 
   resources:
     requests:
@@ -59,9 +56,3 @@ trivy-operator:
     storageClassEnabled: true
     storageClassName: "longhorn"
     storageSize: "10Gi"
-    
-  alternateReportStorage:
-    enabled: true
-    storage: "5Gi"
-    storageClassName: "longhorn"
-    mountPath: "/mnt/trivy-reports"
