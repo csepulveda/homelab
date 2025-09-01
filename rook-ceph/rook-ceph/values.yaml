@@ -51,8 +51,6 @@ cluster:
     cephConfig:
       client.rgw:
         rgw_dns_name: "s3.csepulveda.net"
-        rgw_resolve_cname: "false"
-        rgw_s3_success_create_obj_status: "200"
     cephVersion:
       image: quay.io/ceph/ceph:v18.2.4
       allowUnsupported: false
