@@ -9,7 +9,7 @@ rook-ceph:
         pathType: Prefix
       tls:
         - hosts:
-            - admin-ceph.csepulveda.net
+          - admin-ceph.csepulveda.net
           secretName: admin-ceph-tls
       ingressclassName: nginx
 
