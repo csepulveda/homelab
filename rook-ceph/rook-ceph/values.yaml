@@ -24,6 +24,9 @@ operator:
 
 cluster:
   operatorNamespace: rook-ceph
+
+  toolbox:
+    enable: true
   
   ingress:
     dashboard:
@@ -55,6 +58,17 @@ cluster:
                 - node01
                 - mode02
                 - node03
+    
+    # Configuración de Ceph para limitar PGs por defecto
+    cephConfig:
+      global:
+        # Limitar PGs por defecto para clusters pequeños
+        osd_pool_default_pg_num: "16"
+        osd_pool_default_pgp_num: "16"
+        # Desactivar auto-scaling de PGs
+        osd_pool_default_pg_autoscale_mode: "off"
+      client.rgw:
+        rgw_dns_name: "s3.csepulveda.net"
     
     mon:
       count: 3
