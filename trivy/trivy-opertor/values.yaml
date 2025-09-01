@@ -2,20 +2,28 @@ trivy-operator:
   excludeNamespaces: default
   operator:
     cacheReportTTL: "240h"
-    scannerReportTTL: 72h
-    scanJobTimeout: 15m
-    scanJobsConcurrentLimit: 6
+    scannerReportTTL: 240h
+    scanJobTimeout: 20m
+    scanJobsConcurrentLimit: 2
+    batchDeleteLimit: 5
+    batchDeleteDelay: "30s"
+    scanOnlyCurrentRevisions: true
 
   resources:
     requests:
-      cpu: 100m
-      memory: 1Gi
+      cpu: 200m
+      memory: 2Gi
     limits:
-      cpu: 1
-      memory: 1Gi
+      cpu: 2
+      memory: 4Gi
 
   serviceMonitor:
     enabled: true
   
   trivy:
     ignoreUnfixed: true
+    # Configuración adicional para optimizar cache
+    cacheDir: "/tmp/trivy/.cache"
+    # Habilitar cache de servidor para mejorar rendimiento
+    serverTokenHeader: "Trivy-Token"
+    serverCustomHeaders: ""
