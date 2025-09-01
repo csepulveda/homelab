@@ -47,6 +47,19 @@ cluster:
   
   # Configuración del CephCluster  
   cephClusterSpec:
+    # Placement global para todos los daemons de Ceph
+    placement:
+      all:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - node01
+                - mode02
+                - node03
     # Configuración adicional para RGW
     cephConfig:
       client.rgw:
@@ -62,17 +75,6 @@ cluster:
     mon:
       count: 3
       allowMultiplePerNode: false  # Un monitor por nodo para mejor distribución
-      placement:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - node01
-                - mode02
-                - node03
       volumeClaimTemplate:
         spec:
           storageClassName: iscsi
@@ -83,17 +85,6 @@ cluster:
     mgr:
       count: 2
       allowMultiplePerNode: false
-      placement:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - node01
-                - mode02
-                - node03
       modules:
         - name: rook
           enabled: true
@@ -209,28 +200,8 @@ cluster:
         tuneDeviceClass: true
         tuneFastDeviceClass: false
         encrypted: false
-        placement:
-          nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              nodeSelectorTerms:
-              - matchExpressions:
-                - key: kubernetes.io/hostname
-                  operator: In
-                  values:
-                  - node01
-                  - mode02
-                  - node03
-        preparePlacement:
-          nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              nodeSelectorTerms:
-              - matchExpressions:
-                - key: kubernetes.io/hostname
-                  operator: In
-                  values:
-                  - node01
-                  - mode02
-                  - node03
+        placement: {}
+        preparePlacement: {}
         resources:
           limits:
             memory: "4Gi"
