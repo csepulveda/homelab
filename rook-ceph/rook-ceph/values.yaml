@@ -61,7 +61,18 @@ cluster:
     
     mon:
       count: 3
-      allowMultiplePerNode: true
+      allowMultiplePerNode: false  # Un monitor por nodo para mejor distribución
+      placement:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - node01
+                - mode02
+                - node03
       volumeClaimTemplate:
         spec:
           storageClassName: iscsi
@@ -72,6 +83,17 @@ cluster:
     mgr:
       count: 2
       allowMultiplePerNode: false
+      placement:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - node01
+                - mode02
+                - node03
       modules:
         - name: rook
           enabled: true
@@ -172,15 +194,43 @@ cluster:
       mgr: system-cluster-critical
     
     storage:
+      # Configuración estricta para usar SOLO los discos iSCSI
+      useAllNodes: false
+      useAllDevices: false
+      # Especificar nodos permitidos
+      nodes:
+      - name: node01
+      - name: mode02
+      - name: node03
       storageClassDeviceSets:
       - name: set1
         count: 3
-        portable: true
+        portable: false  # No portable para mantener OSDs en nodos específicos
         tuneDeviceClass: true
         tuneFastDeviceClass: false
         encrypted: false
-        placement: {}
-        preparePlacement: {}
+        placement:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - node01
+                  - mode02
+                  - node03
+        preparePlacement:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - node01
+                  - mode02
+                  - node03
         resources:
           limits:
             memory: "4Gi"
@@ -198,7 +248,7 @@ cluster:
             volumeMode: Block
             accessModes:
               - ReadWriteOnce
-      onlyApplyOSDPlacement: false
+      onlyApplyOSDPlacement: true  # Aplicar estrictamente el placement de OSDs
     
     disruptionManagement:
       managePodBudgets: true
@@ -265,6 +315,7 @@ cluster:
         instances: 2
         priorityClassName: system-cluster-critical
         hostNetwork: false
+        placement: {}  # Sin restricciones adicionales
         resources:
           limits:
             memory: "2Gi"
