@@ -106,13 +106,6 @@ cluster:
         iteration: 1
       allowUninstallWithVolumes: false
     
-    placement:
-      all:
-        tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/control-plane
-          operator: Exists
-    
     annotations: {}
     
     labels:
@@ -272,13 +265,6 @@ cluster:
         instances: 2
         priorityClassName: system-cluster-critical
         hostNetwork: false
-        placement:
-          nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              nodeSelectorTerms:
-              - matchExpressions:
-                - key: node-role.kubernetes.io/control-plane
-                  operator: DoesNotExist
         resources:
           limits:
             memory: "2Gi"
