@@ -8,6 +8,15 @@ trivy-operator:
     batchDeleteLimit: 5
     batchDeleteDelay: "30s"
     scanOnlyCurrentRevisions: true
+    vulnerabilityScannerScanOnlyCurrentRevisions: true
+    configAuditScannerScanOnlyCurrentRevisions: true
+    scanJobPodTemplateContainerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
 
   resources:
     requests:
@@ -27,8 +36,9 @@ trivy-operator:
         memory: 2Gi
 
     ignoreUnfixed: true
-    # Configuración adicional para optimizar cache
     cacheDir: "/tmp/trivy/.cache"
-    # Habilitar cache de servidor para mejorar rendimiento
-    serverTokenHeader: "Trivy-Token"
-    serverCustomHeaders: ""
+    cacheBackend: "redis"
+    serverAddr: ""
+    skipUpdate: true
+    quiet: true
+    noProgress: true
