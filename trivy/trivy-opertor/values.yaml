@@ -17,6 +17,8 @@ trivy-operator:
           - ALL
       privileged: false
       readOnlyRootFilesystem: true
+    # CLAVE: Habilitar servidor trivy para cache por digest
+    builtInTrivyServer: true
 
   resources:
     requests:
@@ -36,11 +38,24 @@ trivy-operator:
         memory: 2Gi
 
     ignoreUnfixed: true
-    # Cache persistente para escaneos de imágenes
+    # Cache persistente para escaneos de imágenes  
     imageScanCacheDir: "/var/lib/trivy-cache"
     clientServerSkipUpdate: true
-    # Habilitar built-in server para mejor cache
-    builtInTrivyServer: true
+    
+    # Configuración del servidor trivy para cache por digest
+    server:
+      resources:
+        requests:
+          cpu: 200m
+          memory: 1Gi
+        limits:
+          cpu: 1
+          memory: 2Gi
+      podSecurityContext:
+        runAsUser: 65534
+        runAsNonRoot: true
+        fsGroup: 65534
+    
     # Storage persistente para el servidor trivy
     storageClassEnabled: true
     storageClassName: "longhorn"
