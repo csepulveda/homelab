@@ -36,13 +36,19 @@ trivy-operator:
         memory: 2Gi
 
     ignoreUnfixed: true
-    cacheDir: "/home/scanner/.cache"
-    skipUpdate: true
-    quiet: true
-    noProgress: true
+    # Cache persistente para escaneos de imágenes
+    imageScanCacheDir: "/var/lib/trivy-cache"
+    clientServerSkipUpdate: true
+    # Habilitar built-in server para mejor cache
+    builtInTrivyServer: true
+    # Storage persistente para el servidor trivy
+    storageClassEnabled: true
+    storageClassName: "longhorn"
+    storageSize: "10Gi"
     
-    persistence:
-      enabled: true
-      size: "5Gi"
-      storageClass: "longhorn"
-      accessMode: ReadWriteOnce
+  # Storage alternativo para reportes persistentes
+  alternateReportStorage:
+    enabled: true
+    storage: "5Gi"
+    storageClassName: "longhorn"
+    mountPath: "/mnt/trivy-reports"
