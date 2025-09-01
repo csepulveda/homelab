@@ -7,8 +7,3 @@ spec:
   bucketName: loki-bucket
   generateBucketName:
   storageClassName: rook-ceph-bucket
-  additionalConfig:
-    maxObjects: "1000"
-    maxSize: "2G"
-    bucketMaxObjects: "3000"
-    bucketMaxSize: "4G"
