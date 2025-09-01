@@ -1,5 +1,4 @@
 rook-ceph:
-
   ingress:
     dashboard:
       annotations:
