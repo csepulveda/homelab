@@ -69,6 +69,10 @@ cluster:
         osd_pool_default_pg_autoscale_mode: "off"
       client.rgw:
         rgw_dns_name: "s3.csepulveda.net"
+      # Configurar PGs bajos para todos los pools nuevos
+      osd:
+        osd_pool_default_pg_num: "8"
+        osd_pool_default_pgp_num: "8"
     
     mon:
       count: 3
