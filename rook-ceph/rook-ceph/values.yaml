@@ -17,10 +17,10 @@ operator:
   enableDiscoveryDaemon: false
   resources:
     limits:
-      memory: 512Mi
+      memory: 256Mi
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 50m
+      memory: 64Mi
 
 cluster:
   operatorNamespace: rook-ceph
@@ -59,7 +59,6 @@ cluster:
                 - mode02
                 - node03
     
-    # Configuración de Ceph para limitar PGs por defecto
     cephConfig:
       global:
         osd_pool_default_pg_num: "16"
@@ -70,6 +69,56 @@ cluster:
       osd:
         osd_pool_default_pg_num: "8"
         osd_pool_default_pgp_num: "8"
+    
+    resources:
+      mgr:
+        limits:
+          memory: "512Mi"
+        requests:
+          cpu: "50m"
+          memory: "256Mi"
+      mon:
+        limits:
+          memory: "1Gi"
+        requests:
+          cpu: "50m"
+          memory: "256Mi"
+      osd:
+        limits:
+          memory: "1Gi"
+        requests:
+          cpu: "50m"
+          memory: "512Mi"
+      prepareosd:
+        limits:
+          memory: "200Mi"
+        requests:
+          cpu: "25m"
+          memory: "50Mi"
+      mgr-sidecar:
+        limits:
+          memory: "50Mi"
+        requests:
+          cpu: "25m"
+          memory: "25Mi"
+      crashcollector:
+        limits:
+          memory: "30Mi"
+        requests:
+          cpu: "5m"
+          memory: "15Mi"
+      logcollector:
+        limits:
+          memory: "200Mi"
+        requests:
+          cpu: "25m"
+          memory: "50Mi"
+      cleanup:
+        limits:
+          memory: "200Mi"
+        requests:
+          cpu: "50m"
+          memory: "50Mi"
     
     mon:
       count: 3
@@ -165,10 +214,10 @@ cluster:
                   - node03
         resources:
           limits:
-            memory: "4Gi"
+            memory: "1Gi"
           requests:
-            cpu: "100m"
-            memory: "2Gi"
+            cpu: "50m"
+            memory: "512Mi"
         volumeClaimTemplates:
         - metadata:
             name: data
@@ -230,10 +279,10 @@ cluster:
         placement: {}
         resources:
           limits:
-            memory: "2Gi"
-          requests:
-            cpu: "100m"
             memory: "512Mi"
+          requests:
+            cpu: "50m"
+            memory: "256Mi"
       healthCheck: {}
     storageClass:
       enabled: true
