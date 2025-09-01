@@ -5,7 +5,6 @@ operator:
   monitoring:
     enabled: false
   
-  # Deshabilitamos el operador CSI que causa problemas con CRDs grandes
   csi:
     rookUseCsiOperator: false
     enableRbdDriver: false
@@ -15,8 +14,7 @@ operator:
     enableRBDSnapshotter: false
     enableVolumeReplication: false
   
-  enableDiscoveryDaemon: false  # Deshabilitado para evitar detección automática de discos
-  
+  enableDiscoveryDaemon: false
   resources:
     limits:
       memory: 512Mi
@@ -27,7 +25,6 @@ operator:
 cluster:
   operatorNamespace: rook-ceph
   
-  # Configuración del Ingress
   ingress:
     dashboard:
       annotations:
@@ -45,9 +42,7 @@ cluster:
           secretName: admin-ceph-tls
       ingressClassName: nginx
   
-  # Configuración del CephCluster  
   cephClusterSpec:
-    # Placement global para todos los daemons de Ceph
     placement:
       all:
         nodeAffinity:
@@ -60,21 +55,10 @@ cluster:
                 - node01
                 - mode02
                 - node03
-    # Configuración adicional para RGW
-    cephConfig:
-      client.rgw:
-        rgw_dns_name: "s3.csepulveda.net"
-    cephVersion:
-      image: quay.io/ceph/ceph:v18.2.4
-      allowUnsupported: false
-    dataDirHostPath: /var/lib/rook
-    skipUpgradeChecks: false
-    continueUpgradeAfterChecksEvenIfNotHealthy: false
-    waitTimeoutForHealthyOSDInMinutes: 10
     
     mon:
       count: 3
-      allowMultiplePerNode: false  # Un monitor por nodo para mejor distribución
+      allowMultiplePerNode: false
       volumeClaimTemplate:
         spec:
           storageClassName: iscsi
@@ -185,16 +169,13 @@ cluster:
       mgr: system-cluster-critical
     
     storage:
-      # IMPORTANTE: Solo usar PVCs, NO detectar discos locales
       useAllNodes: false
       useAllDevices: false
-      # NO especificar nodes cuando usas storageClassDeviceSets
-      # Los PVCs se crearán donde el scheduler de k8s decida
       storageClassDeviceSets:
       - name: set1
         count: 3
-        portable: true  # Portable porque usamos PVCs
-        tuneDeviceClass: false  # No necesario con PVCs
+        portable: true 
+        tuneDeviceClass: false 
         tuneFastDeviceClass: false
         encrypted: false
         placement:
@@ -236,7 +217,7 @@ cluster:
             volumeMode: Block
             accessModes:
               - ReadWriteOnce
-      onlyApplyOSDPlacement: true  # Aplicar estrictamente el placement de OSDs
+      onlyApplyOSDPlacement: true 
     
     disruptionManagement:
       managePodBudgets: true
@@ -262,7 +243,6 @@ cluster:
         osd:
           disabled: false
   
-  # Configuración del CephObjectStore
   cephObjectStores:
   - name: ceph-objectstore
     ingress:
@@ -303,7 +283,7 @@ cluster:
         instances: 2
         priorityClassName: system-cluster-critical
         hostNetwork: false
-        placement: {}  # Sin restricciones adicionales
+        placement: {}
         resources:
           limits:
             memory: "2Gi"
