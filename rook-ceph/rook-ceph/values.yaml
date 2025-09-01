@@ -5,7 +5,9 @@ operator:
   monitoring:
     enabled: false
   
+  # Deshabilitamos el operador CSI que causa problemas con CRDs grandes
   csi:
+    rookUseCsiOperator: false
     enableRbdDriver: false
     enableCephfsDriver: false
     enableNFSDriver: false

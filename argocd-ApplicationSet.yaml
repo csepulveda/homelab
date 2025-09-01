@@ -43,12 +43,24 @@ spec:
           jsonPointers:
             - /spec/replicas
       {{- end }}
+      {{- if eq .path.basename "rook-ceph" }}
+      ignoreDifferences:
+        - group: apiextensions.k8s.io
+          kind: CustomResourceDefinition
+          name: drivers.csi.ceph.io
+        - group: apiextensions.k8s.io
+          kind: CustomResourceDefinition
+          name: operatorconfigs.csi.ceph.io
+      {{- end }}
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
           - PruneLast=true
-          {{- if or (eq .path.basename "stackgres-operator") (eq .path.basename "cilium") (eq .path.basename "minio")  (eq .path.basename "kube") }}
+          {{- if or (eq .path.basename "stackgres-operator") (eq .path.basename "cilium") (eq .path.basename "minio") (eq .path.basename "kube") (eq .path.basename "rook-ceph") }}
           - ServerSideApply=true
+          {{- end }}
+          {{- if eq .path.basename "rook-ceph" }}
+          - Replace=true
           {{- end }}
         automated:
           prune: true
