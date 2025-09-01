@@ -1,5 +1,5 @@
 trivy-operator:
-  excludeNamespaces: default
+  #excludeNamespaces: default
   operator:
     cacheReportTTL: 240h
     scannerReportTTL: 240h
@@ -17,7 +17,7 @@ trivy-operator:
       readOnlyRootFilesystem: false
       runAsNonRoot: false
     builtInTrivyServer: true
-    excludeImages: "nvidia/*,*/nvidia-*,*driver*"
+    #excludeImages: "nvidia/*,*/nvidia-*,*driver*"
 
   resources:
     requests:
