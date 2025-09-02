@@ -96,7 +96,7 @@ metadata:
 spec:
   postgresVersion: "15"
   postgresql.conf:
-    shared_preload_libraries: "pg_stat_statements, auto_explain"
+    shared_preload_libraries: "pg_stat_statements, auto_explain, vchord, vectors"
 ---
 apiVersion: stackgres.io/v1
 kind: SGCluster
@@ -115,6 +115,8 @@ spec:
       - name: pg_trgm
       - name: unaccent
       - name: vchord
+      - name: vectors
+        version: 0.3.0
   configurations:
     sgPostgresConfig: immich-config-15-test
   sgInstanceProfile: immich-db-2g
