@@ -10,7 +10,7 @@ Cluster Kubernetes K3s on-premise con 4 nodos (3 master + 1 worker), optimizado 
 ## 📊 Especificaciones del Cluster
 
 - **Distribución**: K3s v1.32+
-- **Nodos Totales**: 4 (3 físicos + 1 virtual)
+- **Nodos Totales**: 4 (3 físicos + 1 smartphone)
 - **Capacidad Total**: 28 cores físicos (48 threads), 96GB RAM
 - **Storage**: 3.2TB en ZFS (NAS TrueNAS)
 - **Red**: Backbone 10GbE/2.5GbE
