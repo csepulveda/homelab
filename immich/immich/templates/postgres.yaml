@@ -91,10 +91,10 @@ spec:
 apiVersion: stackgres.io/v1
 kind: SGPostgresConfig
 metadata:
-  name: immich-config-15-test
+  name: immich-config-16-test
   namespace: immich
 spec:
-  postgresVersion: "15"
+  postgresVersion: "16"
   postgresql.conf:
     shared_preload_libraries: "pg_stat_statements, auto_explain, vchord, vectors"
 ---
@@ -106,20 +106,18 @@ metadata:
 spec:
   instances: 2
   postgres:
-    version: "15.12"
+    version: "16"
     extensions:
       - name: cube
       - name: earthdistance
       - name: vector
-        version: 0.6.2
       - name: uuid-ossp
       - name: pg_trgm
       - name: unaccent
       - name: vchord
       - name: vectors
-        version: 0.3.0
   configurations:
-    sgPostgresConfig: immich-config-15-test
+    sgPostgresConfig: immich-config-16-test
   sgInstanceProfile: immich-db-2g
   pods:
     persistentVolume: 
