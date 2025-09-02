@@ -79,8 +79,6 @@ cluster:
           cpu: "50m"
           memory: "512Mi"
       prepareosd:
-        limits:
-          memory: "200Mi"
         requests:
           cpu: "25m"
           memory: "50Mi"
