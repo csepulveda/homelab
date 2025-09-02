@@ -61,11 +61,8 @@ cluster:
     
     cephConfig:
       global:
-        osd_pool_default_pg_num: "16"
-        osd_pool_default_pgp_num: "16"
-        osd_pool_default_pg_autoscale_mode: "off"
-      client.rgw:
-        rgw_dns_name: "s3.csepulveda.net"
+        osd_pool_default_pg_num: "8"
+        osd_pool_default_pgp_num: "8"
       osd:
         osd_pool_default_pg_num: "8"
         osd_pool_default_pgp_num: "8"
