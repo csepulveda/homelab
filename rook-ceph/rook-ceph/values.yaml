@@ -221,9 +221,6 @@ cluster:
       - name: mode02
         devices:
         - name: /dev/sda
-      - name: node03
-        devices:
-        - name: /dev/sda
       onlyApplyOSDPlacement: true
 
     disruptionManagement:
