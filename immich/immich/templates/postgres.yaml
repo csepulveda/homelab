@@ -121,6 +121,7 @@ spec:
   pods:
     persistentVolume: 
       size: 10Gi
+      storageClass: longhorn
     scheduling:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
