@@ -22,16 +22,15 @@ Cluster Kubernetes K3s on-premise con 4 nodos (3 master + 1 worker), optimizado 
 | Nodo | Hardware | CPU | RAM | Storage | Red | IP |
 |------|----------|-----|-----|---------|-----|-----|
 | **node01** | ThinkCentre M715q | AMD Ryzen 3 PRO 2200GE (4C/4T) | 16GB | 232GB SSD | 2.5GbE | 192.168.1.150 |
-| **node02** | ThinkCentre M715q | AMD Ryzen 3 PRO 2200GE (4C/4T) | 16GB | 232GB SSD | 1GbE* | 192.168.1.151 |
+| **node02** | ThinkCentre M715q | AMD Ryzen 3 PRO 2200GE (4C/4T) | 16GB | 232GB SSD | 2.5GbE | 192.168.1.151 |
 | **node03** | ThinkCentre M75q Gen 2 | AMD Ryzen 5 PRO 4650GE (6C/12T) | 32GB | 232GB SSD | 2.5GbE | 192.168.1.152 |
 
-*Nota: node02 con tarjeta 2.5GbE defectuosa, operando a 1GbE
 
-### Nodo Worker
+### Nodo Smartphone
 
-| Nodo | Tipo | CPU | RAM | Storage | Host |
-|------|------|-----|-----|---------|------|
-| **vm01** | VM (TrueNAS) | Intel Xeon E5-2680 v4 | 8GB | 117GB | NAS Server |
+| Nodo | Tipo | CPU | RAM | Storage | Red |IP |
+|------|------|-----|-----|---------|------|-----|
+| **oneplus-enchilada** | OnePlus6 | Qualcomm 8CPU | 8GB | 120GB | ~400Mbps (wifi)| 192.168.100.154|
 
 ### Storage Server (NAS)
 
