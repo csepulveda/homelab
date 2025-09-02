@@ -58,15 +58,7 @@ cluster:
                 - node01
                 - mode02
                 - node03
-    
-    cephConfig:
-      global:
-        osd_pool_default_pg_num: "8"
-        osd_pool_default_pgp_num: "8"
-      osd:
-        osd_pool_default_pg_num: "8"
-        osd_pool_default_pgp_num: "8"
-    
+   
     resources:
       mgr:
         limits:
