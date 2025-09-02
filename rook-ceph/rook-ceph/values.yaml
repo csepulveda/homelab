@@ -217,13 +217,13 @@ cluster:
       nodes:
       - name: node01
         devices:
-        - name: "/dev/sda"
+        - name: /dev/sda
       - name: mode02
         devices:
-        - name: "/dev/sda"
+        - name: /dev/sda
       - name: node03
         devices:
-        - name: "/dev/sda"
+        - name: /dev/sda
       onlyApplyOSDPlacement: true
 
     disruptionManagement:
