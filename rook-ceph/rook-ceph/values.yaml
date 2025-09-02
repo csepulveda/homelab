@@ -214,13 +214,6 @@ cluster:
             volumeMode: Block
             accessModes:
               - ReadWriteOnce
-      nodes:
-      - name: node01
-        devices:
-        - name: /dev/sda
-      - name: mode02
-        devices:
-        - name: /dev/sda
       onlyApplyOSDPlacement: true
 
     disruptionManagement:
