@@ -111,6 +111,7 @@ spec:
       - name: cube
       - name: earthdistance
       - name: vector
+        version: 0.5.1
       - name: uuid-ossp
       - name: pg_trgm
       - name: unaccent
