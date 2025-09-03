@@ -133,3 +133,38 @@ spec:
 #              operator: NotIn
 #              values:
 #              - Qualcomm
+---
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: immich-postgresql
+spec:
+  instances: 1
+  storage:
+    size: 20Gi
+    storageClass: iscsi
+  monitoring:
+    enablePodMonitor: true
+  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:15-0.3.0
+  postgresql:
+    shared_preload_libraries:
+      - "vchord.so"
+
+  bootstrap:
+    initdb:
+      database: immich
+      owner: immich
+      dataChecksums: true
+      postInitApplicationSQL:
+        - ALTER USER immich WITH SUPERUSER;
+        - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+        - CREATE EXTENSION IF NOT EXISTS "cube";
+        - CREATE EXTENSION IF NOT EXISTS "earthdistance";
+  resources:
+    limits:
+      cpu: 2
+      memory: 1024Mi
+    requests:
+      cpu: 50m
+      memory: 512Mi
