@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: immich-db-restore
+  namespace: immich
+spec:
+  template:
+    metadata:
+      name: immich-db-restore
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: restore
+        image: postgres:16
+        command: 
+        - /bin/bash
+        - -c
+        - |
+          echo "Starting database restore..."
+          PGPASSWORD="$DB_PASSWORD" psql \
+            -h "$DB_HOSTNAME" \
+            -U "$DB_USERNAME" \
+            -d "$DB_DATABASE_NAME" \
+            -f /restore/backup-2025-09-02-imich.sql
+          echo "Restore completed"
+        env:
+        - name: DB_HOSTNAME
+          valueFrom:
+            secretKeyRef:
+              name: immich-pg-app
+              key: host
+        - name: DB_DATABASE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: immich-pg-app
+              key: dbname
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: immich-pg-app
+              key: password
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: immich-pg-app
+              key: username
+        volumeMounts:
+        - name: restore-volume
+          mountPath: /restore
+      volumes:
+      - name: restore-volume
+        persistentVolumeClaim:
+          claimName: immich-restore
