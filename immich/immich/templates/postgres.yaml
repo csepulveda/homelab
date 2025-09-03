@@ -118,7 +118,8 @@ spec:
       - name: vectors
   configurations:
     sgPostgresConfig: immich-config-16-test
-  sgInstanceProfile: immich-db-2g
+  #sgInstanceProfile: immich-db-2g
+  sgInstanceProfile: immich-db-4g-cpularge
   pods:
     persistentVolume: 
       size: 10Gi
