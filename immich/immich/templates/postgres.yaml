@@ -146,10 +146,11 @@ spec:
     storageClass: iscsi
   monitoring:
     enablePodMonitor: true
-  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:15-0.3.0
+  imageName: christiaangoossens/cloudnative-pgvectors-vectorchord:14-vectorchord0.3.0-pgvectors0.2.0
   postgresql:
     shared_preload_libraries:
       - "vchord.so"
+      - "vectors.so"
 
   bootstrap:
     initdb:
@@ -161,6 +162,7 @@ spec:
         - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
         - CREATE EXTENSION IF NOT EXISTS "cube";
         - CREATE EXTENSION IF NOT EXISTS "earthdistance";
+        - - \i '/var/lib/postgresql/data/backup-2025-09-02.sql'
   resources:
     limits:
       cpu: 2
