@@ -3,7 +3,7 @@ operator:
     enabled: true
   
   monitoring:
-    enabled: false
+    enabled: true
   
   csi:
     rookUseCsiOperator: false
@@ -14,7 +14,7 @@ operator:
     enableRBDSnapshotter: false
     enableVolumeReplication: false
   
-  enableDiscoveryDaemon: false
+  enableDiscoveryDaemon: true
   resources:
     limits:
       memory: 1Gi
