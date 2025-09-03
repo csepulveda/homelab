@@ -31,7 +31,7 @@ immich:
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
-      tag: v1.135.3
+      tag: v1.140.1
       #tag: v1.135.3-cuda
       #tag: v1.97.0-cuda #https://github.com/immich-app/immich/issues/8570
     #runtimeClassName: nvidia
@@ -54,7 +54,7 @@ immich:
         memory: "256Mi"
 
   image:
-    tag: v1.135.3
+    tag: v1.140.1
   immich:
     metrics:
       enabled: true
