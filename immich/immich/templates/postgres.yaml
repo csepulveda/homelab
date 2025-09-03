@@ -133,40 +133,39 @@ spec:
 #              operator: NotIn
 #              values:
 #              - Qualcomm
----
----
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: immich-pg
-spec:
-  instances: 1
-  storage:
-    size: 20Gi
-    storageClass: iscsi
-  monitoring:
-    enablePodMonitor: true
-  imageName: christiaangoossens/cloudnative-pgvectors-vectorchord:14-vectorchord0.3.0-pgvectors0.2.0
-  postgresql:
-    shared_preload_libraries:
-      - "vchord.so"
-      - "vectors.so"
+# ---
+# apiVersion: postgresql.cnpg.io/v1
+# kind: Cluster
+# metadata:
+#   name: immich-pg
+# spec:
+#   instances: 1
+#   storage:
+#     size: 20Gi
+#     storageClass: iscsi
+#   monitoring:
+#     enablePodMonitor: true
+#   imageName: christiaangoossens/cloudnative-pgvectors-vectorchord:14-vectorchord0.3.0-pgvectors0.2.0
+#   postgresql:
+#     shared_preload_libraries:
+#       - "vchord.so"
+#       - "vectors.so"
 
-  bootstrap:
-    initdb:
-      database: immich
-      owner: immich
-      dataChecksums: true
-      postInitApplicationSQL:
-        - ALTER USER immich WITH SUPERUSER;
-        - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
-        - CREATE EXTENSION IF NOT EXISTS "cube";
-        - CREATE EXTENSION IF NOT EXISTS "earthdistance";
-        - - \i '/var/lib/postgresql/data/backup-2025-09-02.sql'
-  resources:
-    limits:
-      cpu: 2
-      memory: 1024Mi
-    requests:
-      cpu: 50m
-      memory: 512Mi
+#   bootstrap:
+#     initdb:
+#       database: immich
+#       owner: immich
+#       dataChecksums: true
+#       postInitApplicationSQL:
+#         - ALTER USER immich WITH SUPERUSER;
+#         - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+#         - CREATE EXTENSION IF NOT EXISTS "cube";
+#         - CREATE EXTENSION IF NOT EXISTS "earthdistance";
+#         - - \i '/var/lib/postgresql/data/backup-2025-09-02.sql'
+#   resources:
+#     limits:
+#       cpu: 2
+#       memory: 1024Mi
+#     requests:
+#       cpu: 50m
+#       memory: 512Mi
