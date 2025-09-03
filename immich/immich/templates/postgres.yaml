@@ -87,49 +87,49 @@ spec:
               operator: NotIn
               values:
               - Qualcomm
----
-apiVersion: stackgres.io/v1
-kind: SGPostgresConfig
-metadata:
-  name: immich-config-16-test
-  namespace: immich
-spec:
-  postgresVersion: "16"
-  postgresql.conf:
-    shared_preload_libraries: "pg_stat_statements, auto_explain, vchord, vectors"
----
-apiVersion: stackgres.io/v1
-kind: SGCluster
-metadata:
-  name: immich-postgresql-vchord
-  namespace: immich
-spec:
-  instances: 2
-  postgres:
-    version: "16"
-    extensions:
-      - name: cube
-      - name: earthdistance
-      - name: vector
-      - name: uuid-ossp
-      - name: pg_trgm
-      - name: unaccent
-      - name: vchord
-      - name: vectors
-  configurations:
-    sgPostgresConfig: immich-config-16-test
-  sgInstanceProfile: immich-db-2g
-  #sgInstanceProfile: immich-db-4g-cpularge
-  pods:
-    persistentVolume: 
-      size: 10Gi
-      storageClass: longhorn
-    scheduling:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-            - key: feature.node.kubernetes.io/cpu-model.vendor_id
-              operator: NotIn
-              values:
-              - Qualcomm
+#---
+#apiVersion: stackgres.io/v1
+#kind: SGPostgresConfig
+#metadata:
+#  name: immich-config-16-test
+#  namespace: immich
+#spec:
+#  postgresVersion: "16"
+#  postgresql.conf:
+#    shared_preload_libraries: "pg_stat_statements, auto_explain, vchord, vectors"
+#---
+#apiVersion: stackgres.io/v1
+#kind: SGCluster
+#metadata:
+#  name: immich-postgresql-vchord
+#  namespace: immich
+#spec:
+#  instances: 2
+#  postgres:
+#    version: "16"
+#    extensions:
+#      - name: cube
+#      - name: earthdistance
+#      - name: vector
+#      - name: uuid-ossp
+#      - name: pg_trgm
+#      - name: unaccent
+#      - name: vchord
+#      - name: vectors
+#  configurations:
+#    sgPostgresConfig: immich-config-16-test
+#  sgInstanceProfile: immich-db-2g
+#  #sgInstanceProfile: immich-db-4g-cpularge
+#  pods:
+#    persistentVolume: 
+#      size: 10Gi
+#      storageClass: longhorn
+#    scheduling:
+#      nodeAffinity:
+#        requiredDuringSchedulingIgnoredDuringExecution:
+#          nodeSelectorTerms:
+#          - matchExpressions:
+#            - key: feature.node.kubernetes.io/cpu-model.vendor_id
+#              operator: NotIn
+#              values:
+#              - Qualcomm
