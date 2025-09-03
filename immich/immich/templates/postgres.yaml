@@ -138,7 +138,7 @@ spec:
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: immich-postgresql
+  name: immich-pg
 spec:
   instances: 1
   storage:
