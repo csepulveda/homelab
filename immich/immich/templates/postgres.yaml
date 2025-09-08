@@ -166,8 +166,8 @@ spec:
         - CREATE EXTENSION IF NOT EXISTS "earthdistance";
   resources:
     limits:
-      cpu: 2
-      memory: 1024Mi
+      cpu: '2'
+      memory: 1Gi
     requests:
       cpu: 50m
       memory: 512Mi
