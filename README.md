@@ -21,9 +21,9 @@ Cluster Kubernetes K3s on-premise con 4 nodos (3 master + 1 worker), optimizado 
 
 | Nodo | Hardware | CPU | RAM | Storage | Red | IP |
 |------|----------|-----|-----|---------|-----|-----|
-| **node01** | ThinkCentre M715q | AMD Ryzen 3 PRO 2200GE (4C/4T) | 16GB | 232GB SSD | 2.5GbE | 192.168.1.150 |
-| **node02** | ThinkCentre M715q | AMD Ryzen 3 PRO 2200GE (4C/4T) | 16GB | 232GB SSD | 2.5GbE | 192.168.1.151 |
-| **node03** | ThinkCentre M75q Gen 2 | AMD Ryzen 5 PRO 4650GE (6C/12T) | 32GB | 232GB SSD | 2.5GbE | 192.168.1.152 |
+| **node01** | ThinkCentre M715q | AMD Ryzen 3 PRO 2200GE (4C/4T) | 16GB | 232GB NVME | 2.5GbE | 192.168.1.150 |
+| **node02** | ThinkCentre M75q Gen 2 | AMD Ryzen 5 PRO 4650GE (6C/12T) | 24GB | 232GB NVME | 2.5GbE | 192.168.1.151 |
+| **node03** | ThinkCentre M75q Gen 2 | AMD Ryzen 5 PRO 4650GE (6C/12T) | 32GB | 232GB NVME | 2.5GbE | 192.168.1.152 |
 
 
 ### Nodo Smartphone
@@ -55,18 +55,18 @@ Router ISP
 Access Point WiFi 6 (1 Gbps)
     ↓
 Switch Principal (2×10G + 4×2.5G + 2×1G)
-    ├── [10G SFP+] → NAS TrueNAS
-    ├── [10G] → Workstation Mac
-    ├── [2.5G] → node01
-    ├── [2.5G] → node03
-    ├── [1G] → node02
-    └── [2.5G] → Access Point
+    ├── [10Gbps SFP+ Fiber] → NAS TrueNAS
+    ├── [10Gbps SFP+ Ethernet] → Workstation Mac
+    ├── [2.5Gbps] → node01
+    ├── [2.5Gbps] → node03
+    ├── [2.5Gbps] → node02
+    └── [1Gbps] → Access Point
 ```
 
 ### Distribución de Ancho de Banda
 
 - **Backbone Principal**: Mac ↔ NAS @ 10 Gbps
-- **Nodos K3s**: 2.5/1 Gbps hacia NAS
+- **Nodos K3s**: 2.5 Gbps hacia NAS
 - **Internet/WAN**: 1 Gbps simétrico
 - **WiFi 6**: Hasta 1.2 Gbps
 
@@ -76,9 +76,9 @@ Switch Principal (2×10G + 4×2.5G + 2×1G)
 
 | Protocolo | Throughput Read | Throughput Write | IOPS Read | IOPS Write |
 |-----------|-----------------|------------------|-----------|------------|
-| **iSCSI (128K)** | 280 MB/s | 179 MB/s | 2,238 | 1,430 |
-| **NFS Single (128K)** | 280 MB/s | 75-85 MB/s | 2,239 | 600-684 |
-| **NFS Multi-client (128K)** | 320-322 MB/s | 26-49 MB/s | 2,563-2,574 | 211-397 |
+| **iSCSI (128K)** | 280 MB/s | 241 MB/s | 2240.64 | 1935.34 |
+| **NFS Single (128K)** | 284 MB/s | 194 MB/s | 2241.98 | 1556.55 |
+| **NFS Multi-client (128K)** | 358 MB/s | 131 MB/s | 2867.22 | 1056.09 |
 
 ### Storage Classes Disponibles
 
@@ -99,8 +99,7 @@ Switch Principal (2×10G + 4×2.5G + 2×1G)
 
 ### Networking & Ingress
 - **NGINX Ingress Controller**: Internal services ingress
-- **Traefik**: External ingress controller
-- **Cilium**: eBPF-based CNI with network policies
+- **Cilium**: eBPF-based CNI with network policies and External Ingress Controller
 
 ### Observability & Monitoring
 - **Prometheus**: Metrics collection and alerting
@@ -109,8 +108,10 @@ Switch Principal (2×10G + 4×2.5G + 2×1G)
 - **Trivy Operator**: Vulnerability scanning for containers
 
 ### Storage & Data
-- **MinIO**: S3-compatible object storage
+- **MinIO**: S3-compatible object storage (deprecated)
+- **Ceph**: S3-compatible object storage
 - **StackGres**: PostgreSQL operator for HA databases
+- **Cloudnative-PG**: PostgreSQL operator for HA databases
 - **Longhorn**: Distributed block storage
 - **Democratic CSI**: NFS/iSCSI provisioner
 
