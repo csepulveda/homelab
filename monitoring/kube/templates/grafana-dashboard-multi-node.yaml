@@ -29,16 +29,158 @@ data:
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 1,
-      "id": 1,
+      "id": 2,
       "links": [],
       "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 23,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.1.1",
+          "targets": [
+            {
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "count(node_cpu_seconds_total{instance=~\"$instance\", cluster=\"$cluster\", mode=\"idle\"})",
+              "instant": true,
+              "legendFormat": "__auto",
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "Number of Cores",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              },
+              "unit": "decbytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "id": 24,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.1.1",
+          "targets": [
+            {
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "sum(node_memory_MemTotal_bytes{instance=~\"$instance\", cluster=\"$cluster\"})",
+              "instant": true,
+              "legendFormat": "Total Memory",
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "Total Memory",
+          "type": "stat"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 6
+          },
+          "id": 22,
+          "panels": [],
+          "title": "Total Resources",
+          "type": "row"
+        },
         {
           "collapsed": true,
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 0
+            "y": 7
           },
           "id": 17,
           "panels": [],
@@ -107,9 +249,9 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 4,
+            "w": 6,
             "x": 0,
-            "y": 1
+            "y": 8
           },
           "id": 18,
           "options": {
@@ -125,7 +267,7 @@ data:
               "sort": "none"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "editorMode": "code",
@@ -218,7 +360,7 @@ data:
               "sort": "none"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -316,7 +458,7 @@ data:
               "sort": "none"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -414,7 +556,7 @@ data:
               "sort": "none"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -524,7 +666,7 @@ data:
               "sort": "none"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -610,7 +752,7 @@ data:
             "sizing": "auto",
             "text": {}
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "repeat": "instance",
           "repeatDirection": "h",
           "targets": [
@@ -683,7 +825,7 @@ data:
             "sizing": "auto",
             "text": {}
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "repeat": "instance",
           "repeatDirection": "h",
           "targets": [
@@ -800,7 +942,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -903,7 +1045,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1039,7 +1181,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1047,7 +1189,7 @@ data:
                 "uid": "$datasource"
               },
               "editorMode": "code",
-              "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\".*\", cluster=\"$cluster\"} / node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\".*\", cluster=\"$cluster\"})",
+              "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"} / node_memory_MemTotal_bytes{job=\"node-exporter\", instance=~\"$instance\", cluster=\"$cluster\"})",
               "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "A"
@@ -1141,7 +1283,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1256,7 +1398,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1357,7 +1499,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1521,7 +1663,7 @@ data:
               }
             ]
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1739,7 +1881,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1841,7 +1983,7 @@ data:
               "sort": "desc"
             }
           },
-          "pluginVersion": "12.1.0",
+          "pluginVersion": "12.1.1",
           "targets": [
             {
               "datasource": {
@@ -1928,16 +2070,11 @@ data:
               },
               {
                 "selected": false,
-                "text": "192.168.100.154:9100",
-                "value": "192.168.100.154:9100"
-              },
-              {
-                "selected": false,
                 "text": "192.168.100.155:9100",
                 "value": "192.168.100.155:9100"
               }
             ],
-            "query": "192.168.100.150:9100, 192.168.100.151:9100, 192.168.100.152:9100, 192.168.100.154:9100, 192.168.100.155:9100",
+            "query": "192.168.100.150:9100, 192.168.100.151:9100, 192.168.100.152:9100, 192.168.100.155:9100",
             "type": "custom"
           }
         ]
