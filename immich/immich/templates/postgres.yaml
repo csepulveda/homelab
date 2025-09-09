@@ -148,12 +148,10 @@ spec:
     storageClass: iscsi
   monitoring:
     enablePodMonitor: true
-  imageName: christiaangoossens/cloudnative-pgvectors-vectorchord:14-vectorchord0.3.0-pgvectors0.2.0
+  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:15-0.3.0
   postgresql:
     shared_preload_libraries:
       - "vchord.so"
-      - "vectors.so"
-
   bootstrap:
     initdb:
       database: immich
