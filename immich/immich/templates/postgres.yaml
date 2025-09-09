@@ -148,7 +148,7 @@ spec:
     storageClass: iscsi
   monitoring:
     enablePodMonitor: true
-  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:15-0.3.0
+  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:14-0.3.0
   postgresql:
     shared_preload_libraries:
       - "vchord.so"
