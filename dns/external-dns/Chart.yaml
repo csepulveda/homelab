@@ -2,11 +2,11 @@ apiVersion: v2
 name: external-dns
 description: external-dns
 type: application
-version: 1.18.0
+version: 1.19.0
 appVersion: 0.16.1
 
 dependencies:
 - name: external-dns
-  version: 1.18.0
+  version: 1.19.0
   repository: "https://kubernetes-sigs.github.io/external-dns/"
   alias: external-dns
