@@ -11,6 +11,6 @@ dependencies:
   repository: "https://charts.rook.io/release"
   alias: operator
 - name: rook-ceph-cluster
-  version: v1.18.2
+  version: v1.18.3
   repository: "https://charts.rook.io/release"
   alias: cluster
