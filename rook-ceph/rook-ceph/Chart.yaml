@@ -7,7 +7,7 @@ appVersion: v1.18.1
 
 dependencies:
 - name: rook-ceph
-  version: v1.18.3
+  version: v1.18.4
   repository: "https://charts.rook.io/release"
   alias: operator
 - name: rook-ceph-cluster
