@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Updatecli in the runner
-        uses: updatecli/updatecli-action@v4
+        uses: updatecli/updatecli-action@v2
 
       - name: Run Updatecli in Dry Run mode
         run: updatecli diff
