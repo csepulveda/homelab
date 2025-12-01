@@ -8,6 +8,7 @@ scms:
       repository: "homelab"
       branch: "main"
       token: "{{ requiredEnv `GITHUB_TOKEN` }}"
+      username: "{{ requiredEnv `GITHUB_ACTOR` }}"
 
 autodiscovery:
   scmid: github

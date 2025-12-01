@@ -24,10 +24,10 @@ jobs:
         run: updatecli diff
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPDATECLI_GITHUB_USERNAME: "${{ github.actor }}"
+          GITHUB_ACTOR: ${{ github.actor }}
 
       - name: Run Updatecli in Apply mode
         run: updatecli apply
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPDATECLI_GITHUB_USERNAME: ${{ github.actor }}
+          GITHUB_ACTOR: ${{ github.actor }}
