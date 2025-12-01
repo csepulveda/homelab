@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   updatecli:
@@ -22,9 +23,11 @@ jobs:
       - name: Run Updatecli in Dry Run mode
         run: updatecli diff
         env:
-          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_USERNAME: "${{ github.actor }}"
 
       - name: Run Updatecli in Apply mode
         run: updatecli apply
         env:
-          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_USERNAME: ${{ github.actor }}
