@@ -2,11 +2,11 @@ apiVersion: v2
 name: loki
 description: install Loki
 type: application
-version: 6.38.0
+version: 6.39.0
 appVersion: 3.4.2
 
 dependencies:
 - name: loki
-  version: 6.43.0
+  version: 6.46.0
   repository: "https://grafana.github.io/helm-charts"
   alias: loki

@@ -2,11 +2,11 @@ apiVersion: v2
 name: immich
 description: install immich
 type: application
-version: 0.10.0
+version: 0.11.0
 appVersion: v1.135.3
 
 dependencies:
 - name: immich
-  version: 0.10.0
+  version: 0.10.3
   repository: "https://immich-app.github.io/immich-charts"
   alias: immich
