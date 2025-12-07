@@ -72,11 +72,13 @@ kind: Ingress
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    #nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    external-dns.alpha.kubernetes.io/target: router.csepulveda.net
   name: qbittorrent
   namespace: multimedia
 spec:
-  ingressClassName: nginx
+  #ingressClassName: nginx
+  ingressClassName: cilium
   rules:
   - host: qbittorrent.csepulveda.net
     http:
