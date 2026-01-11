@@ -3,11 +3,11 @@ apiVersion: v2
 name: jellyfin
 description: install jellyfin
 type: application
-version: 0.3.12
-appVersion: 10.10.7
+version: 0.3.18
+appVersion: 10.11.5
 
 dependencies:
 - name: jellyfin
-  version: 0.3.12
+  version: 0.3.18
   repository: "oci://codeberg.org/wrenix/helm-charts/jellyfin"
   alias: jellyfin
