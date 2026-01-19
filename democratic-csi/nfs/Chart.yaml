@@ -2,11 +2,11 @@ apiVersion: v2
 name: nfs
 description: nfs
 type: application
-version: 0.15.0
+version: 0.16.0
 appVersion: 0.15.0
 
 dependencies:
 - name: democratic-csi
-  version: 0.15.0
+  version: 0.15.1
   repository: "https://democratic-csi.github.io/charts/"
   alias: democratic-csi
