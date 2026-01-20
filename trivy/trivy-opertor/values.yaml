@@ -43,7 +43,7 @@ trivy-operator:
     offlineScan: false
 
     storageClassEnabled: true
-    storageClassName: "longhorn"
+    storageClassName: "iscsi"
     storageSize: "10Gi"
     
     server:
