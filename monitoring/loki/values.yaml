@@ -13,12 +13,12 @@ loki:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
-          name: loki-bucket
+          name: loki-rustfs
           key: AWS_ACCESS_KEY_ID
     - name: AWS_SECRET_ACCESS_KEY
       valueFrom:
         secretKeyRef:
-          name: loki-bucket
+          name: loki-rustfs
           key: AWS_SECRET_ACCESS_KEY
   loki:
     image:
@@ -26,11 +26,11 @@ loki:
     storage:
       type: s3
       bucketNames:
-        chunks: loki-bucket
-        ruler: loki-bucket
-        admin: loki-bucket
+        chunks: loki
+        ruler: loki
+        admin: loki
       s3:
-        endpoint: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local:80"
+        endpoint: "http://192.168.100.155:30292"
         region: "us-east-1"
         s3ForcePathStyle: true
         insecure: true
