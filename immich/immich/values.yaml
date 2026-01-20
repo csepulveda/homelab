@@ -64,8 +64,6 @@ immich:
 
   redis:
     enabled: true
-    image:
-      tag: latest
     master:
       resources:
         requests:
