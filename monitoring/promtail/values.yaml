@@ -1,6 +1,13 @@
 promtail:
   config:
     logLevel: warn
+    # Reduce CPU by batching logs less frequently
+    clients:
+      - url: http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push
+        batchwait: 5s
+        batchsize: 1048576
+    positions:
+      sync_period: 30s
     snippets:
       pipelineStages:
       - cri: {}
