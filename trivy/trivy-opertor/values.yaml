@@ -1,5 +1,5 @@
 trivy-operator:
-  #excludeNamespaces: default
+  excludeNamespaces: kafka
   operator:
     cacheReportTTL: 240h
     scannerReportTTL: 240h
