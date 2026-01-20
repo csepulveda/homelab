@@ -271,13 +271,13 @@ data:
           "targets": [
             {
               "editorMode": "code",
-              "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.150:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
+              "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.156:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
               "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "192.168.100.150:9100",
+          "title": "192.168.100.156:9100",
           "type": "timeseries"
         },
         {
@@ -368,14 +368,14 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.151:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
+              "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.157:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
               "hide": false,
               "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "B"
             }
           ],
-          "title": "192.168.100.151:9100",
+          "title": "192.168.100.157:9100",
           "type": "timeseries"
         },
         {
@@ -466,14 +466,14 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.152:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
+              "expr": "node_hwmon_temp_celsius{instance=\"192.168.100.158:9100\", chip=\"0000:00:08_1_0000:04:00_0\"}",
               "hide": false,
               "legendFormat": "{{`{{instance}}`}}",
               "range": true,
               "refId": "C"
             }
           ],
-          "title": "192.168.100.152:9100",
+          "title": "192.168.100.158:9100",
           "type": "timeseries"
         },
         {
@@ -1945,18 +1945,18 @@ data:
             "options": [
               {
                 "selected": false,
-                "text": "192.168.100.150:9100",
-                "value": "192.168.100.150:9100"
+                "text": "192.168.100.156:9100",
+                "value": "192.168.100.156:9100"
               },
               {
                 "selected": false,
-                "text": "192.168.100.151:9100",
-                "value": "192.168.100.151:9100"
+                "text": "192.168.100.157:9100",
+                "value": "192.168.100.157:9100"
               },
               {
                 "selected": false,
-                "text": "192.168.100.152:9100",
-                "value": "192.168.100.152:9100"
+                "text": "192.168.100.158:9100",
+                "value": "192.168.100.158:9100"
               },
               {
                 "selected": false,
@@ -1964,7 +1964,7 @@ data:
                 "value": "192.168.100.155:9100"
               }
             ],
-            "query": "192.168.100.150:9100, 192.168.100.151:9100, 192.168.100.152:9100, 192.168.100.155:9100",
+            "query": "192.168.100.156:9100, 192.168.100.157:9100, 192.168.100.158:9100, 192.168.100.155:9100",
             "type": "custom"
           }
         ]
