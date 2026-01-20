@@ -30,11 +30,11 @@ trivy-operator:
   trivy:
     resources:
       requests:
-        cpu: 100m
-        memory: 512Mi
+        cpu: 50m
+        memory: 256Mi
       limits:
-        cpu: 1
-        memory: 3Gi
+        cpu: 500m
+        memory: 2Gi
 
     ignoreUnfixed: true
     imageScanCacheDir: "/var/lib/trivy-cache"
