@@ -31,7 +31,7 @@ immich:
     image:
       repository: ghcr.io/immich-app/immich-machine-learning
       pullPolicy: IfNotPresent
-      tag: v1.141.1
+      #tag: v1.141.1
       #tag: v1.135.3-cuda
       #tag: v1.97.0-cuda #https://github.com/immich-app/immich/issues/8570
     #runtimeClassName: nvidia
@@ -54,7 +54,7 @@ immich:
         memory: "256Mi"
 
   image:
-    tag: v1.141.1
+    #tag: v1.141.1
   immich:
     metrics:
       enabled: true
@@ -62,15 +62,15 @@ immich:
       library:
         existingClaim: immich-backup
 
-  redis:
-    enabled: true
-    master:
-      resources:
-        requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
-          cpu: 1
+ # redis:
+ #   enabled: true
+ #   master:
+ #     resources:
+ #       requests:
+ #         cpu: 100m
+ #         memory: 128Mi
+ #       limits:
+ #         cpu: 1
 
   env:
     - name: IMMICH_TELEMETRY_INCLUDE
