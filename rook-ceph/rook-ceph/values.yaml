@@ -58,7 +58,10 @@ cluster:
                 - node01
                 - mode02
                 - node03
-   
+                - node001
+                - node002
+                - node003
+
     resources:
       mgr:
         limits:
@@ -186,6 +189,9 @@ cluster:
                   - node01
                   - mode02
                   - node03
+                  - node001
+                  - node002
+                  - node003
         preparePlacement:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
@@ -197,6 +203,9 @@ cluster:
                   - node01
                   - mode02
                   - node03
+                  - node001
+                  - node002
+                  - node003
         resources:
           limits:
             memory: "2Gi"
