@@ -29,3 +29,10 @@ cilium:
   rollOutCiliumPods: true
   routingMode: tunnel
   tunnelProtocol: vxlan
+  # Reduce CPU usage
+  monitor:
+    aggregation: medium
+  bpf:
+    monitorAggregation: medium
+    monitorInterval: 30s
+    monitorFlags: all
