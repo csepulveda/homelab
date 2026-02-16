@@ -1,45 +1,69 @@
-apiVersion: v1
-kind: Endpoints
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: esphome-power
+  name: esphome-power-proxy
   namespace: monitoring
-  labels:
-    app: esphome-power
-subsets:
-  - addresses:
-      - ip: 192.168.100.137
-    ports:
-      - name: http-metrics
-        port: 80
-        protocol: TCP
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: esphome-power-proxy}
+  template:
+    metadata:
+      labels: {app: esphome-power-proxy}
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: cfg
+          configMap:
+            name: esphome-power-proxy-cm
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: esphome-power-proxy-cm
+  namespace: monitoring
+data:
+  metrics.conf: |
+    server {
+      listen 8080;
+      location /metrics {
+        proxy_pass http://192.168.100.137:80/metrics;
+      }
+    }
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: esphome-power
+  name: esphome-power-proxy
   namespace: monitoring
   labels:
-    app: esphome-power
+    app: esphome-power-proxy
     job: esphome
 spec:
-  type: ClusterIP
-  clusterIP: None
+  selector: {app: esphome-power-proxy}
   ports:
     - name: http-metrics
-      port: 80
-      targetPort: 80
+      port: 8080
+      targetPort: 8080
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: esphome-power
+  name: esphome-power-proxy
   namespace: monitoring
   labels:
     release: prometheus
 spec:
   jobLabel: job
   selector:
-    matchLabels: {app: esphome-power}
+    matchLabels: {app: esphome-power-proxy}
   namespaceSelector:
     matchNames: ["monitoring"]
   endpoints:
@@ -47,6 +71,9 @@ spec:
       interval: 15s
       path: /metrics
       metricRelabelings:
+        - action: replace
+          targetLabel: instance
+          replacement: "192.168.100.137:80"
         - action: replace
           targetLabel: nodename
           replacement: "esphome-power"
