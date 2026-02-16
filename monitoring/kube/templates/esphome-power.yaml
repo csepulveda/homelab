@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: esphome-power
+  namespace: monitoring
+  labels:
+    app: esphome-power
+subsets:
+  - addresses:
+      - ip: 192.168.100.137
+    ports:
+      - name: http-metrics
+        port: 80
+        protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: esphome-power
+  namespace: monitoring
+  labels:
+    app: esphome-power
+    job: esphome
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http-metrics
+      port: 80
+      targetPort: 80
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: esphome-power
+  namespace: monitoring
+  labels:
+    release: prometheus
+spec:
+  jobLabel: job
+  selector:
+    matchLabels: {app: esphome-power}
+  namespaceSelector:
+    matchNames: ["monitoring"]
+  endpoints:
+    - port: http-metrics
+      interval: 15s
+      path: /metrics
+      metricRelabelings:
+        - action: replace
+          targetLabel: nodename
+          replacement: "esphome-power"
