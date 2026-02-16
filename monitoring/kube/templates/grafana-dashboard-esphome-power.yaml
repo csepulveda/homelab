@@ -428,12 +428,12 @@ data:
           "targets": [
             {
               "expr": "esphome_sensor_failed{node=\"power\"}",
-              "legendFormat": "{{name}}",
+              "legendFormat": "{{`{{name}}`}}",
               "refId": "A"
             },
             {
               "expr": "esphome_switch_failed{node=\"power\"}",
-              "legendFormat": "{{name}}",
+              "legendFormat": "{{`{{name}}`}}",
               "refId": "B"
             }
           ],
