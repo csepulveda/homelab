@@ -1,6 +1,6 @@
 dependencies:
 - name: immich
   repository: https://immich-app.github.io/immich-charts
-  version: 0.11.0
-digest: sha256:c1ff335a25785c7f7ee5b079da11916169265387b7197fab9d5ae82c2cd3b512
-generated: "2026-03-28T00:42:15.011894892Z"
+  version: 0.11.1
+digest: sha256:432bb941bda57e8a17a5998fe6e53fd6b33411e3721e3e03c361d735537aee17
+generated: "2026-04-01T00:50:29.649836313Z"
