@@ -7,6 +7,6 @@ appVersion: 0.27.3
 
 dependencies:
 - name: trivy-operator
-  version: 0.34.0
+  version: 0.35.0
   repository: "https://aquasecurity.github.io/helm-charts/"
   alias: trivy-operator
