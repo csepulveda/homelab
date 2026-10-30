@@ -1,0 +1,6 @@
+apiVersion: v2
+name: openclaw
+description: install openclaw gateway (WhatsApp) using local Ollama on the Mac Studio
+type: application
+version: 0.0.1
+appVersion: 2026.10.9

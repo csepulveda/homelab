@@ -1,0 +1,21 @@
+image:
+  repository: ghcr.io/openclaw/openclaw
+  tag: 2026.10.9-slim
+
+storage:
+  storageClassName: iscsi
+  size: 10Gi
+
+# Ollama corriendo en el Mac Studio (LaunchAgent com.csepulveda.ollama)
+ollama:
+  baseUrl: http://192.168.100.149:11434
+  primaryModel: gemma4:26b
+  models:
+    - gemma4:26b
+    - qwen3.8:27b
+  contextTokens: 32768
+
+# Secret creado fuera de git:
+#   kubectl -n openclaw create secret generic openclaw-secrets \
+#     --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+existingSecret: openclaw-secrets
