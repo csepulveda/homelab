@@ -564,8 +564,8 @@ SINONIMOS = {"super": "Supermercado", "comida": "Restaurantes", "restaurant": "R
              "netflix": "Suscripciones", "spotify": "Suscripciones", "app": "Suscripciones"}
 
 
-def interpretar(texto, opciones):
-    """Texto libre -> categoría (o None)."""
+def interpretar(texto, opciones, usar_llm=True):
+    """Texto libre -> categoría (o None). Sin usar_llm solo vale número, "ok", nombre o sinónimo."""
     t = norm(texto).lower()
     m = re.search(r"\b([1-9])\b", t)
     if m and opciones and int(m.group(1)) <= len(opciones):
@@ -579,6 +579,8 @@ def interpretar(texto, opciones):
     for k, c in SINONIMOS.items():
         if re.search(rf"\b{k}\b", t):
             return c
+    if not usar_llm:
+        return None
     desc = "\n".join(f"- {k}: {v}" for k, v in CATS.items()) + "\n- Préstamo: plata que me van a devolver"
     js = llm("El usuario responde qué tipo de gasto fue un movimiento bancario. Mapea su respuesta a UNA categoría:\n"
              + desc + "\nResponde SOLO JSON {\"categoria\": \"<de la lista>\", \"confianza\": <0..1>}. "
@@ -630,7 +632,8 @@ def cmd_responder(args):
     texto = re.sub(r"^(\s*\[[^\]]{1,80}\]\s*)+", "", texto).strip()
     t = norm(texto).lower()
     # En el grupo de gastos todo mensaje llega aquí: el CLI decide, no el modelo.
-    if re.fullmatch(r"(pendientes?|que (me )?falta.*|que hay pendiente.*|lista)", t):
+    tiene_id = bool(re.search(r"\b[gtc]\d{1,5}\b", t))
+    if not tiene_id and re.search(r"pendiente|\bfalta|\blista\b|\blistar\b|por confirmar|sin confirmar", t):
         args.recordatorio = False
         return cmd_pendientes(args)
     m = re.fullmatch(r"(corregir|cambiar|corrige|cambia)\s+(el\s+)?([gtc]\d{1,5})\s+(?:a\s+|por\s+|era\s+)?(.+)", t)
@@ -653,7 +656,7 @@ def cmd_responder(args):
     if m:
         args.texto, args.categoria, args.fijo = m.group(1).strip(" \"'"), m.group(2), bool(m.group(3))
         return cmd_regla(args)
-    if re.fullmatch(r"(hola|ayuda|help|\?|menu|menú)", t):
+    if not tiene_id and re.search(r"\b(hola|ayuda|help|menu|comandos|como funciona|que puedo|como uso)\b|^\?$", t):
         print(AYUDA)
         return
     st, sh = State(), Sheet()
@@ -663,7 +666,11 @@ def cmd_responder(args):
         print("No tengo preguntas de gastos pendientes.")
         return
     p = st.d["pendientes"].get(gid, {})
-    cat = interpretar(re.sub(r"\b[GTC]\d{1,5}\b", "", texto, flags=re.I), p.get("opciones"))
+    # Sin ID explícito el mensaje puede ser cualquier cosa: no dejar que el LLM adivine una categoría.
+    cat = interpretar(re.sub(r"\b[GTC]\d{1,5}\b", "", texto, flags=re.I), p.get("opciones"), usar_llm=bool(m))
+    if not cat and not m:
+        print(f"No entendí 🤔 ({len(st.d['pendientes'])} gastos por confirmar).\n" + AYUDA)
+        return
     if not cat:
         print(f"No entendí la categoría para {gid}. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría")
               + f"\nPara crear una nueva: {gid} nueva <nombre>")
