@@ -370,7 +370,7 @@ def llm_system():
             "COPEC APP -> {\"categoria\":\"Combustible\",\"confianza\":0.95}\n"
             "MERCADOPAGO*SEKHM -> {\"categoria\":\"Otros\",\"confianza\":0.2}\n"
             "PARKING ALTO LAS -> {\"categoria\":\"Transporte\",\"confianza\":0.9}\n"
-            "Transferencia a 'S.PODESTA YUTR' mensaje '' -> {\"categoria\":\"Persona\",\"confianza\":0.4}")
+            "Transferencia a 'J.PEREZ ROJAS' mensaje '' -> {\"categoria\":\"Persona\",\"confianza\":0.4}")
 
 
 def llm(system, user):
@@ -619,7 +619,7 @@ AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
          "• \"pendientes\": lo que falta confirmar\n"
          "• \"G12 1\", \"T3 arriendo fijo\", \"G15 farmacia\": responder una pregunta\n"
          "• \"corregir G5 supermercado\": cambiar uno ya registrado\n"
-         "• \"regla godoy = auto-March\": todo lo que diga \"godoy\" va a esa categoría (también lo pasado)")
+         "• \"regla taller = Transporte\": todo lo que diga \"taller\" va a esa categoría (también lo pasado)")
 
 
 def cmd_responder(args):
@@ -737,7 +737,7 @@ def _limpia(desc):
 
 
 def nombre_coincide(corto, largo):
-    """'L.GODOY CORDOV' (cartola) vs 'Luis Alberto Godoy Cordova' (correo): cada palabra del nombre
+    """'J.PEREZ ROJA' (cartola) vs 'Juan Andrés Pérez Rojas' (correo): cada palabra del nombre
     corto es prefijo de una palabra del largo; las iniciales cuentan como prefijo de 1 letra."""
     a = [w for w in re.split(r"[^A-Z0-9]+", norm(corto)) if w]
     b = [w for w in re.split(r"[^A-Z0-9]+", norm(largo)) if w]
