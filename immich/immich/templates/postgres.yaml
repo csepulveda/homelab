@@ -93,6 +93,15 @@ spec:
   monitoring:
     enablePodMonitor: true
   imageName: ghcr.io/tensorchord/cloudnative-vectorchord:14-0.3.0
+  # Backups fisicos + archivado de WAL al S3 (RustFS) del NAS mediante el plugin
+  # Barman Cloud (cloudnative-pg/plugin-barman-cloud). El soporte nativo
+  # (.spec.backup.barmanObjectStore) desaparece en CNPG 1.31. Definicion del
+  # ObjectStore y de los ScheduledBackup en postgres-backup.yaml.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ .Values.pgBackup.objectStoreName }}
   postgresql:
     shared_preload_libraries:
       - "vchord.so"

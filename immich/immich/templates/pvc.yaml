@@ -24,3 +24,17 @@ spec:
       storage: 2Gi
   storageClassName: nfs
 
+---
+# Dumps logicos de la DB (mensuales); ya existia en el cluster, ahora declarado aqui.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: immich
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs
