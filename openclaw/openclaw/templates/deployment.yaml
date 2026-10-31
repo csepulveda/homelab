@@ -119,7 +119,7 @@ spec:
               cpu: 250m
             limits:
               memory: 2Gi
-              cpu: "1"
+              cpu: "2"
           # /startupz no depende de la salud de los canales (WhatsApp sin vincular
           # no deja el pod en NotReady). /healthz para liveness.
           startupProbe:
@@ -146,9 +146,12 @@ spec:
                 - node
                 - -e
                 - "require('http').get('http://127.0.0.1:18789/healthz', r => { let b = ''; r.on('data', d => b += d); r.on('end', () => { try { process.exit(r.statusCode < 400 && JSON.parse(b).ok === true ? 0 : 1); } catch { process.exit(1); } }); }).on('error', () => process.exit(1))"
+            # Instalar/actualizar plugins satura el event loop >60s; dar margen
+            # (~3 min) antes de reiniciar.
             initialDelaySeconds: 60
             periodSeconds: 30
-            timeoutSeconds: 10
+            timeoutSeconds: 20
+            failureThreshold: 6
           volumeMounts:
             - name: openclaw-home
               mountPath: /home/node/.openclaw
