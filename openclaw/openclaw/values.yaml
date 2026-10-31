@@ -9,9 +9,14 @@ storage:
 # Ollama corriendo en el Mac Studio (LaunchAgent com.csepulveda.ollama)
 ollama:
   baseUrl: http://192.168.100.149:11434
+  # Benchmark agentico (2026-10-31, 7 tareas x2, M1 Max 32GB):
+  #   gemma4:26b 100/100, 455 tok/s prefill, 43 tok/s gen -> principal
+  #   muse-glimmer:30b-mlx 100/100, 77 / 14 tok/s (~6x mas lento)
+  #   qwen3.8:27b 92/100, 79 / 14 tok/s
   primaryModel: gemma4:26b
   models:
     - gemma4:26b
+    - muse-glimmer:30b-mlx
     - qwen3.8:27b
   contextTokens: 32768
 
