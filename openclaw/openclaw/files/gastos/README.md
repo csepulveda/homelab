@@ -12,7 +12,7 @@ La categorización sigue este orden: reglas aprendidas (pestaña Reglas), luego 
 
 ## Seguridad
 
-- El agente `gastos` solo puede ejecutar `/opt/gastos/gastos responder …`, y `main` no puede ejecutar nada (ver `templates/exec-approvals.yaml`).
+- El agente `gastos` solo puede ejecutar `/opt/gastos-tools/gastos responder …`, y `main` no puede ejecutar nada (ver `templates/exec-approvals.yaml`).
 - WhatsApp solo admite los grupos de `.Values.whatsappGroups`. sync-config reescribe `channels.whatsapp.groups` y `bindings` en cada arranque, y cualquier otro grupo se descarta antes del modelo. Los JID van en el Secret.
 - Las herramientas de archivos del agente solo alcanzan el workspace (`tools.fs.workspaceOnly`).
 - gog y pypdf se descargan con verificación de sha256 a un emptyDir que el gateway monta read-only. El CLI viene del ConfigMap, también read-only.
@@ -44,11 +44,11 @@ kubectl -n openclaw exec deploy/openclaw -c gateway -- gastos cartola --backfill
 # 4. Crons (quedan en el estado del PVC)
 TO="1203...@g.us"   # JID del grupo de gastos (los avisos llegan al grupo)
 oc automations create "*/2 * * * *" --name "gastos: sync" --tz America/Santiago \
-  --command-argv '["/opt/gastos/gastos","sync"]' --timeout-seconds 300 --announce --channel whatsapp --to "$TO"
+  --command-argv '["/opt/gastos-tools/gastos","sync"]' --timeout-seconds 300 --announce --channel whatsapp --to "$TO"
 oc automations create "0 10 * * *" --name "gastos: cartola" --tz America/Santiago \
-  --command-argv '["/opt/gastos/gastos","cartola"]' --timeout-seconds 600 --announce --channel whatsapp --to "$TO"
+  --command-argv '["/opt/gastos-tools/gastos","cartola"]' --timeout-seconds 600 --announce --channel whatsapp --to "$TO"
 oc automations create "0 21 * * *" --name "gastos: pendientes" --tz America/Santiago \
-  --command-argv '["/opt/gastos/gastos","pendientes","--recordatorio"]' --announce --channel whatsapp --to "$TO"
+  --command-argv '["/opt/gastos-tools/gastos","pendientes","--recordatorio"]' --announce --channel whatsapp --to "$TO"
 ```
 
 ## Pestañas de la planilla

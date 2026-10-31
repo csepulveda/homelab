@@ -234,9 +234,9 @@ spec:
                   name: {{ .Values.existingSecret }}
                   key: OPENCLAW_GATEWAY_TOKEN
             {{- if .Values.gastos.enabled }}
-            # /opt/gastos primero: la allowlist de exec solo permite /opt/gastos/gastos
+            # /opt/gastos-tools primero: la allowlist de exec solo permite /opt/gastos-tools/gastos
             - name: PATH
-              value: /opt/gastos:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/node/.local/bin
+              value: /opt/gastos-tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/node/.local/bin
             - name: PYTHONPATH
               value: /opt/gastos-tools/pypdf.whl
             - name: GASTOS_GOG_BIN
@@ -316,9 +316,6 @@ spec:
             - name: tmp
               mountPath: /tmp
             {{- if .Values.gastos.enabled }}
-            - name: gastos-bin
-              mountPath: /opt/gastos
-              readOnly: true
             - name: gastos-tools
               mountPath: /opt/gastos-tools
               readOnly: true
@@ -351,16 +348,6 @@ spec:
         - name: gastos
           configMap:
             name: openclaw-gastos
-        # solo el CLI y su parser, ejecutables y read-only
-        - name: gastos-bin
-          configMap:
-            name: openclaw-gastos
-            defaultMode: 0555
-            items:
-              - key: gastos
-                path: gastos
-              - key: gastos_parse.py
-                path: gastos_parse.py
         - name: gastos-tools
           emptyDir:
             sizeLimit: 100Mi
