@@ -54,7 +54,11 @@ oc automations create "0 21 * * *" --name "gastos: pendientes" --tz America/Sant
 ## Pestañas de la planilla
 
 - **Gastos**: ID (G = compra, T = transferencia, C = cartola), fecha, hora, monto, tipo, contraparte, categoría, fijo, detalle, cuenta, estado (`auto`/`pendiente`/`revisar`/`confirmado`), fuente, conciliado y origen (comprobante o ID de Gmail).
-- **Reglas**: lo que aprende de tus respuestas. Se puede editar a mano; la columna "Preguntar siempre" sirve para contrapartes que varían.
+- **Reglas**: lo que aprende de tus respuestas. Se puede editar a mano; la columna "Preguntar siempre" sirve para contrapartes que varían. Tipos de regla:
+  - `Compra`, `Transferencia` y `Cartola` usan la contraparte exacta. Las transferencias de la cartola (`TRANSFER A L.GODOY CORDOV`) también coinciden por nombre abreviado con la regla del correo.
+  - `Contiene` aplica a todo movimiento cuyo nombre o mensaje contenga el texto: `gastos regla godoy auto-March`, o por WhatsApp "regla godoy = auto-March".
+  - Cada regla nueva o corregida se aplica **retroactivamente** a toda la planilla (`gastos reaplicar` lo fuerza).
+- **Categorías**: nombre, descripción (gemma la usa para sugerir) y si suma al gasto. Se edita en la planilla o con `gastos categoria "auto-March" "descripción" [--no-suma]`.
 - **Cartolas**: períodos procesados y si cuadraron.
 
-No suman al gasto: Traspaso propio, Pago tarjeta, Préstamo e Ingreso.
+Por defecto no suman al gasto: Traspaso propio, Pago tarjeta, Préstamo e Ingreso (columna "Suma al gasto" de Categorías).

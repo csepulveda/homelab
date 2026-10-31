@@ -74,10 +74,43 @@ CATS = {
     "Persona": "transferencia a una persona natural sin contexto claro (préstamo, pago compartido, etc.)",
     "Otros": "cualquier otra cosa",
 }
+
 # Solo por reglas (el modelo no las propone).
-EXTRA_CATS = ["Préstamo", "Costo bancario", "Efectivo", "Ingreso", "Sin categoría"]
-ALL_CATS = list(CATS) + EXTRA_CATS
+EXTRA_CATS = {
+    "Préstamo": "plata que me van a devolver",
+    "Costo bancario": "comisiones, impuestos y costos del banco",
+    "Efectivo": "giros en cajero",
+    "Ingreso": "abonos y transferencias recibidas",
+}
 NO_GASTO = {"Traspaso propio", "Pago tarjeta", "Préstamo", "Ingreso"}
+CATEGORIAS_COLS = ["Categoría", "Descripción", "Suma al gasto"]
+# Valores por defecto para sembrar la pestaña "Categorías"; desde ahí manda la planilla.
+DEFAULT_CATS = {**CATS, **EXTRA_CATS}
+ALL_CATS = list(DEFAULT_CATS) + ["Sin categoría"]
+
+
+def configurar_categorias(sh):
+    """Carga categorías desde la pestaña "Categorías" (la crea con los valores por defecto si no existe)."""
+    global CATS, ALL_CATS, NO_GASTO
+    try:
+        rows = sh.rows("Categorías", len(CATEGORIAS_COLS))
+    except RuntimeError:
+        gog("sheets", "add-tab", SHEET, "Categorías", parse=False)
+        rows = []
+    if len(rows) < 2:
+        seed = [CATEGORIAS_COLS] + [[k, v, "no" if k in NO_GASTO else "sí"] for k, v in DEFAULT_CATS.items()]
+        sh.update(f"Categorías!A1:C{len(seed)}", seed)
+        gog("sheets", "freeze", SHEET, "--sheet", "Categorías", "--rows", "1", parse=False)
+        rows = seed
+    cats, no_gasto = {}, set()
+    for r in rows[1:]:
+        r = r + [""] * (3 - len(r))
+        if r[0].strip():
+            cats[r[0].strip()] = r[1].strip()
+            if r[2].strip().lower() in ("no", "false"):
+                no_gasto.add(r[0].strip())
+    CATS, NO_GASTO = cats, no_gasto
+    ALL_CATS = list(cats) + ["Sin categoría"]
 RELACIONADAS = {
     "Restaurantes": ["Supermercado", "Entretención"], "Supermercado": ["Restaurantes", "Hogar"],
     "Persona": ["Préstamo", "Restaurantes"], "Compras": ["Hogar", "Otros"], "Hogar": ["Compras", "Servicios básicos"],
@@ -195,7 +228,7 @@ class Sheet:
     @staticmethod
     def _safe(rows):
         """USER_ENTERED evalúa texto que empiece con = + - @ como fórmula: anteponer '."""
-        return [[("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in r] for r in rows]
+        return [[("'" + v) if isinstance(v, str) and v and v[0] in "=+-@" else v for v in r] for r in rows]
 
     def append(self, tab, rows):
         rows = self._safe(rows)
@@ -373,7 +406,7 @@ def sugerir(item):
 
 def categorizar(item, reglas, st, backfill=False):
     """-> (categoria, fijo, preguntar, motivo)."""
-    r = reglas.get((tipo_regla(item), norm(clave(item))))
+    r = buscar_regla(reglas, tipo_regla(item), clave(item), f"{item['contraparte']} {item.get('mensaje') or ''}")
     if r:
         return r["cat"], r["fijo"], r["preguntar"], "regla"
     if item["tipo"] == "transferencia" and es_propio(item):
@@ -539,8 +572,9 @@ def interpretar(texto, opciones):
         return opciones[int(m.group(1)) - 1]
     if re.fullmatch(r"(ok|si|sí|correcto|dale|bien)\b.*", t) and opciones:
         return opciones[0]
+    compacto = re.sub(r"[^a-z0-9]", "", t)
     for c in sorted(ALL_CATS, key=len, reverse=True):
-        if c != "Sin categoría" and norm(c).lower() in t:
+        if c != "Sin categoría" and re.sub(r"[^a-z0-9]", "", norm(c).lower()) in compacto:
             return c
     for k, c in SINONIMOS.items():
         if re.search(rf"\b{k}\b", t):
@@ -572,7 +606,9 @@ def aplicar(sh, st, gid, cat, fijo, quien="usuario"):
         msg += f" (y {len(p['tambien'])} movimientos más de {p['contraparte']})"
     if cl and not re.search(GENERICOS, norm(cl)):
         sh.set_regla(tipo, cl, cat, fijo, quien)
-        msg += f". Regla guardada para \"{cl.split('|')[0]}\"."
+        msg += f". Regla guardada para \"{cl.split('|')[0]}\""
+        n = reaplicar(sh, st)
+        msg += f" (+{n} movimientos más actualizados)." if n else "."
     if st.d.get("ultima_pregunta") == gid:
         st.d["ultima_pregunta"] = None
     st.save()
@@ -582,7 +618,8 @@ def aplicar(sh, st, gid, cat, fijo, quien="usuario"):
 AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
          "• \"pendientes\": lo que falta confirmar\n"
          "• \"G12 1\", \"T3 arriendo fijo\", \"G15 farmacia\": responder una pregunta\n"
-         "• \"corregir G5 supermercado\": cambiar uno ya registrado")
+         "• \"corregir G5 supermercado\": cambiar uno ya registrado\n"
+         "• \"regla godoy = auto-March\": todo lo que diga \"godoy\" va a esa categoría (también lo pasado)")
 
 
 def cmd_responder(args):
@@ -599,6 +636,10 @@ def cmd_responder(args):
     if m:
         args.id, args.texto = m.group(3), [m.group(4)]
         return cmd_corregir(args)
+    m = re.fullmatch(r"regla\s+(.+?)\s*(?:=|->|→|:)\s*(.+?)(\s+fijo)?", texto, flags=re.I)
+    if m:
+        args.texto, args.categoria, args.fijo = m.group(1).strip(" \"'"), m.group(2), bool(m.group(3))
+        return cmd_regla(args)
     if re.fullmatch(r"(hola|ayuda|help|\?|menu|menú)", t):
         print(AYUDA)
         return
@@ -628,6 +669,37 @@ def cmd_corregir(args):
         print("No entendí la categoría. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría"))
         return
     print(aplicar(sh, st, args.id.upper(), cat, bool(re.search(r"\bfijo\b", " ".join(args.texto).lower()))))
+
+
+def cmd_regla(args):
+    """Regla "contiene": todo movimiento cuyo nombre o mensaje contenga el texto -> categoría (retroactivo)."""
+    st, sh = State(), Sheet()
+    cat = interpretar(args.categoria, None)
+    if not cat:
+        print("No entendí la categoría. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría"))
+        return
+    sh.set_regla("Contiene", args.texto, cat, args.fijo, "usuario")
+    n = reaplicar(sh, st)
+    print(f"✓ Regla: todo lo que contenga \"{args.texto}\" → {cat}" + (" (fijo)" if args.fijo else "")
+          + f". {n} movimientos actualizados.")
+
+
+def cmd_categoria(args):
+    sh = Sheet()
+    rows = sh.rows("Categorías", len(CATEGORIAS_COLS))
+    vals = [args.nombre, args.descripcion, "no" if args.no_suma else "sí"]
+    for i, r in enumerate(rows[1:], start=2):
+        if r and norm(r[0]) == norm(args.nombre):
+            sh.update(f"Categorías!A{i}:C{i}", [vals])
+            break
+    else:
+        sh.append("Categorías", [vals])
+    print(f"✓ Categoría \"{args.nombre}\"" + (" (no suma al gasto)" if args.no_suma else ""))
+
+
+def cmd_reaplicar(_args):
+    st, sh = State(), Sheet()
+    print(f"✓ Reglas reaplicadas: {reaplicar(sh, st)} movimientos actualizados.")
 
 
 def cmd_pendientes(args):
@@ -662,6 +734,81 @@ def _fecha(s):
 def _limpia(desc):
     d = re.sub(r"^AUT\s+", "", desc)
     return re.sub(r"\s+\d{3,}$", "", d).strip()
+
+
+def nombre_coincide(corto, largo):
+    """'L.GODOY CORDOV' (cartola) vs 'Luis Alberto Godoy Cordova' (correo): cada palabra del nombre
+    corto es prefijo de una palabra del largo; las iniciales cuentan como prefijo de 1 letra."""
+    a = [w for w in re.split(r"[^A-Z0-9]+", norm(corto)) if w]
+    b = [w for w in re.split(r"[^A-Z0-9]+", norm(largo)) if w]
+    largas = [w for w in a if len(w) >= 3]
+    return bool(largas) and all(any(x.startswith(w) for x in b) for w in a)
+
+
+def buscar_regla(reglas, tipo, cl, texto):
+    r = reglas.get((tipo, norm(cl)))
+    if r:
+        return r
+    if tipo == "Cartola":
+        r = regla_compra(reglas, cl)
+        if r:
+            return r
+        m = re.match(r"TRANSFER A (.+)", norm(cl))
+        if m:
+            for (tp, k), rr in reglas.items():
+                if tp == "Transferencia" and nombre_coincide(m.group(1), k.split("|")[0]):
+                    return rr
+    t = norm(texto)
+    best = None
+    for (tp, k), rr in reglas.items():
+        if tp == "Contiene" and k and k in t and (best is None or len(k) > best[0]):
+            best = (len(k), rr)
+    return best[1] if best else None
+
+
+def regla_fila(reglas, r):
+    """Regla que aplica a una fila de la pestaña Gastos (o None)."""
+    tipo, contra, det = r[4], r[5], r[8]
+    if tipo == "Transferencia":
+        return buscar_regla(reglas, "Transferencia", f"{contra}|{re.sub(r'[^0-9]', '', r[9])[-4:]}", f"{contra} {det}")
+    if tipo == "Compra débito":
+        return buscar_regla(reglas, "Compra", contra, contra)
+    if tipo == "Cargo cartola":
+        return buscar_regla(reglas, "Cartola", contra, f"{contra} {det}")
+    return None  # ingresos: no se recategorizan por reglas
+
+
+def reaplicar(sh, st):
+    """Aplica las reglas a TODA la planilla (retroactivo). Devuelve cuántas filas cambió."""
+    reglas = sh.reglas()
+    data, tocadas = [], set()
+    for i, r in enumerate(sh.gastos()[1:], start=2):
+        r = r + [""] * (len(GASTOS_COLS) - len(r))
+        rg = regla_fila(reglas, r)
+        if not rg or rg["preguntar"]:
+            continue
+        fijo = "sí" if rg["fijo"] else r[7]
+        # la regla la definió el usuario: lo dudoso queda confirmado; lo automático sigue "auto"
+        estado = "confirmado" if r[10] in ("pendiente", "revisar", "confirmado") else (r[10] or "auto")
+        if [r[6], r[7], r[10]] != [rg["cat"], fijo, estado]:
+            data.append({"range": f"Gastos!G{i}:H{i}", "values": [[rg["cat"], fijo]]})
+            data.append({"range": f"Gastos!K{i}", "values": [[estado]]})
+            tocadas.add(r[0])
+    for k in range(0, len(data), 400):
+        gog("sheets", "batch-update", SHEET, "--data-json", json.dumps(data[k:k + 400], ensure_ascii=False),
+            "--input", "USER_ENTERED")
+    sh._gastos = None
+    # pendientes resueltos por la regla
+    for gid in list(st.d["pendientes"]):
+        p = st.d["pendientes"][gid]
+        p["tambien"] = [g for g in p.get("tambien", []) if g not in tocadas]
+        if gid in tocadas:
+            resto = p["tambien"]
+            st.d["pendientes"].pop(gid)
+            if resto:  # el primero de los que quedan hereda la pregunta
+                st.d["pendientes"][resto[0]] = {**p, "tambien": resto[1:]}
+    st.save()
+    return len(tocadas)
 
 
 def regla_compra(reglas, nombre):
@@ -736,7 +883,7 @@ def cmd_cartola(args):
             elif re.match(r"TRANSFER A ", desc) and es_propio({"contraparte": desc[11:]}):
                 cat, preguntar = "Traspaso propio", False
             else:
-                r = reglas.get(("Cartola", norm(item["contraparte"]))) or regla_compra(reglas, item["contraparte"])
+                r = buscar_regla(reglas, "Cartola", item["contraparte"], f"{item['contraparte']} {desc}")
                 if re.search(GENERICOS, norm(item["contraparte"])):
                     cat, preguntar = "Sin categoría", True
                 elif r:
@@ -817,6 +964,15 @@ def main():
     k.add_argument("texto", nargs="+")
     p = sub.add_parser("pendientes")
     p.add_argument("--recordatorio", action="store_true")
+    g = sub.add_parser("regla")
+    g.add_argument("texto")
+    g.add_argument("categoria")
+    g.add_argument("--fijo", action="store_true")
+    n = sub.add_parser("categoria")
+    n.add_argument("nombre")
+    n.add_argument("descripcion")
+    n.add_argument("--no-suma", action="store_true")
+    sub.add_parser("reaplicar")
     a = ap.parse_args()
     if not SHEET or not ACCOUNT:
         sys.exit("Faltan GASTOS_SHEET_ID / GASTOS_ACCOUNT")
@@ -833,8 +989,11 @@ def main():
             if time.time() > deadline:
                 sys.exit("gastos: otro proceso sigue corriendo (lock ocupado)")
             time.sleep(1)
+    if a.cmd != "init":
+        configurar_categorias(Sheet())
     {"init": cmd_init, "sync": cmd_sync, "cartola": cmd_cartola, "responder": cmd_responder,
-     "corregir": cmd_corregir, "pendientes": cmd_pendientes}[a.cmd](a)
+     "corregir": cmd_corregir, "pendientes": cmd_pendientes, "regla": cmd_regla,
+     "categoria": cmd_categoria, "reaplicar": cmd_reaplicar}[a.cmd](a)
 
 
 if __name__ == "__main__":
