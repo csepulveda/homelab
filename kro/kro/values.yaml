@@ -1,4 +1,0 @@
-kro:
-  metrics:
-    serviceMonitor:
-      enabled: false

@@ -19,11 +19,6 @@ kube:
         type: loki
         uid: loki
         url: http://loki-gateway/
-      - name: Tempo
-        access: tempo
-        type: tempo
-        uid: tempo
-        url: http://tempo:3200/
     ingress:
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
