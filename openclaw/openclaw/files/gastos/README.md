@@ -5,7 +5,7 @@ Registra en Google Sheets las compras con débito, las transferencias y las cart
 | Pieza | Qué hace |
 |---|---|
 | `gastos_parse.py` | Parser determinístico de los correos y de la cartola en PDF. La cartola se valida contra su "Resumen del Periodo". |
-| `gastos` | CLI: `init`, `sync`, `cartola`, `responder`, `corregir`, `pendientes`. Su salida estándar se envía por WhatsApp; la salida `NO_REPLY` significa no enviar nada. |
+| `gastos` | CLI: `init`, `sync`, `cartola`, `responder`, `corregir`, `pendientes`, `regla`, `categoria`, `reaplicar`, `export` (JSON de toda la planilla para el análisis mensual). Su salida estándar se envía por WhatsApp; la salida `NO_REPLY` significa no enviar nada. |
 | `../gastos-bridge/` | Plugin de OpenClaw (hook `before_dispatch`) que responde los mensajes del grupo ejecutando `gastos responder <mensaje>` (argv, sin shell) y devolviendo su salida tal cual, **sin turno del modelo**. |
 | `AGENTS-gastos.md` | Instrucciones del agente `gastos`, que atiende el grupo de WhatsApp "Control Gastos": cada mensaje se pasa tal cual a `gastos responder "<mensaje>"`, y el CLI decide si es una respuesta, "pendientes", "corregir G5 …" o "ayuda". |
 
