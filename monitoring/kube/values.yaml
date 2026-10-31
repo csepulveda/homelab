@@ -1,4 +1,67 @@
 kube:
+  # k3s no expone controller-manager, scheduler ni kube-proxy (este ultimo esta
+  # deshabilitado: lo reemplaza Cilium). Sin esto el chart genera targets
+  # inexistentes y las alertas *Down quedan siempre encendidas.
+  kubeProxy:
+    enabled: false
+  kubeControllerManager:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+  # etcd embebido de k3s, expuesto con `etcd-expose-metrics: true` en
+  # /etc/rancher/k3s/config.yaml (http :2381 en la IP del nodo).
+  kubeEtcd:
+    enabled: true
+    endpoints:
+      - 192.168.100.156
+      - 192.168.100.157
+      - 192.168.100.158
+    service:
+      enabled: true
+      port: 2381
+      targetPort: 2381
+    serviceMonitor:
+      scheme: http
+  alertmanager:
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        receiver: "null"
+        group_by: [namespace, alertname]
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+        routes:
+          # Latido: se enviara a un dead-man's switch externo cuando exista canal.
+          - receiver: "null"
+            matchers:
+              - alertname = "Watchdog"
+          # Enchufe ESPHome apagado a proposito; se conserva la config.
+          - receiver: "null"
+            matchers:
+              - alertname = "TargetDown"
+              - job = "esphome"
+          # El NAS usa toda la RAM libre como ARC de ZFS: no es un problema.
+          - receiver: "null"
+            matchers:
+              - alertname = "NodeMemoryHighUtilization"
+              - instance = "192.168.100.155:9100"
+      inhibit_rules:
+        - source_matchers: [severity = "critical"]
+          target_matchers: [severity =~ "warning|info"]
+          equal: [namespace, alertname]
+        - source_matchers: [severity = "warning"]
+          target_matchers: [severity = "info"]
+          equal: [namespace, alertname]
+        - source_matchers: [alertname = "InfoInhibitor"]
+          target_matchers: [severity = "info"]
+          equal: [namespace]
+        - target_matchers: [alertname = "InfoInhibitor"]
+      receivers:
+        - name: "null"
+      templates:
+        - /etc/alertmanager/config/*.tmpl
   prometheus:
     prometheusSpec:
       storageSpec:
