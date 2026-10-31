@@ -387,6 +387,14 @@ def categorizar(item, reglas, st, backfill=False):
     return cat, False, preguntar, f"modelo {conf:.2f}"
 
 
+NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+
+
+def opciones_txt(ops):
+    # Sin "1)" al inicio de línea: WhatsApp/OpenClaw lo convierte en lista numerada de corrido.
+    return "→ " + " · ".join(f"{NUM[i]} {o}" for i, o in enumerate(ops))
+
+
 def pregunta(gid, item, cat):
     ops = [cat] + [c for c in RELACIONADAS.get(cat, ["Otros", "Compras"]) if c != cat][:2]
     if cat == "Sin categoría":
@@ -401,8 +409,7 @@ def pregunta(gid, item, cat):
         head = f"🤔 {gid}: {clp(item['monto'])} en {item['contraparte']} ({item['fecha']}{hora})"
     else:
         head = f"🤔 {gid}: cargo {clp(item['monto'])} '{item['contraparte']}' ({item['fecha']})"
-    opts = "  ".join(f"{i}) {c}" for i, c in enumerate(ops, 1))
-    return head + f"\n{opts}\nResponde el número, otra categoría, o agrega \"fijo\" si es mensual.", ops
+    return head + f"\n{opciones_txt(ops)}\nResponde el número, otra categoría, o agrega \"fijo\" si es mensual.", ops
 
 
 # --- sync de correos -------------------------------------------------------------
@@ -631,12 +638,12 @@ def cmd_pendientes(args):
         return
     lines = [f"📋 {len(pend)} gastos por confirmar" + (" (resumen del día)" if args.recordatorio else "") + ":"]
     for gid, p in pend[:10]:
-        ops = " ".join(f"{i}) {o}" for i, o in enumerate(p.get("opciones") or [p["sugerida"]], 1))
         mas = f" (+{len(p['tambien'])} más)" if p.get("tambien") else ""
-        lines.append(f"{gid}: {clp(p.get('monto', 0))} {p['contraparte']} ({p.get('fecha', '')}){mas}\n   {ops}")
+        lines.append(f"{gid} · {clp(p.get('monto', 0))} · {p['contraparte']} · {p.get('fecha', '')}{mas}\n"
+                     + opciones_txt(p.get("opciones") or [p["sugerida"]]))
     if len(pend) > 10:
         lines.append(f"…y {len(pend) - 10} más.")
-    lines.append("Responde por ejemplo \"G12 1\", \"T3 arriendo fijo\" o \"G15 farmacia\" (una por mensaje).")
+    lines.append("Responde uno por mensaje, por ejemplo: G1 2 · T1 préstamo · T3 arriendo fijo")
     st.d["ultima_pregunta"] = pend[0][0]
     st.save()
     print("\n".join(lines))
