@@ -580,6 +580,9 @@ AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
 
 def cmd_responder(args):
     texto = " ".join(args.texto).strip()
+    # El agente pasa el mensaje "textual"; a veces con sellos del canal al inicio
+    # ("[Sat 2026-10-31 14:11 GMT-3] pendientes"). Se quitan antes de interpretar.
+    texto = re.sub(r"^(\s*\[[^\]]{1,80}\]\s*)+", "", texto).strip()
     t = norm(texto).lower()
     # En el grupo de gastos todo mensaje llega aquí: el CLI decide, no el modelo.
     if re.fullmatch(r"(pendientes?|que (me )?falta.*|que hay pendiente.*|lista)", t):
