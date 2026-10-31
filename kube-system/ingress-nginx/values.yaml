@@ -11,6 +11,13 @@ ingress-nginx:
       requests:
         cpu: 50m
         memory: 128Mi
+    service:
+      # Conserva la IP real del cliente: con Cluster, si el nodo que anuncia la
+      # IP del LB (L2) no es el que corre el pod, el trafico cruza por vxlan con
+      # SNAT y nginx ve la IP del nodo (10.42.x.x), rompiendo las whitelists
+      # (ej. openclaw). Con Local, Cilium solo anuncia la IP desde los nodos
+      # que tienen el pod.
+      externalTrafficPolicy: Local
     metrics:
       enabled: true
       serviceMonitor:
