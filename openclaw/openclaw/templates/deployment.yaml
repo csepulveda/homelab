@@ -69,9 +69,11 @@ spec:
               mkdir -p /home/node/.openclaw/workspace
               [ -f /home/node/.openclaw/workspace/AGENTS.md ] || cp /config/AGENTS.md /home/node/.openclaw/workspace/AGENTS.md
               {{- if .Values.gastos.enabled }}
-              # la skill la manda git: se sobreescribe en cada arranque
-              mkdir -p /home/node/.openclaw/workspace/skills/gastos
-              cp /gastos/SKILL.md /home/node/.openclaw/workspace/skills/gastos/SKILL.md
+              # agente "gastos" (grupo de WhatsApp): su AGENTS.md lo manda git
+              mkdir -p /home/node/.openclaw/workspace-gastos
+              cp /gastos/AGENTS-gastos.md /home/node/.openclaw/workspace-gastos/AGENTS.md
+              # la skill ya no vive en el agente main
+              rm -rf /home/node/.openclaw/workspace/skills/gastos
               {{- end }}
           securityContext:
             runAsUser: 1000
@@ -99,6 +101,17 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: IfNotPresent
           command: ["node", "/config/sync-config.js"]
+          env:
+            - name: WA_GROUPS_SPEC
+              value: {{ $spec := list }}{{ range .Values.whatsappGroups }}{{ $spec = append $spec (dict "name" .name "agent" .agent "env" .secretKey) }}{{ end }}{{ $spec | toJson | quote }}
+            {{- range .Values.whatsappGroups }}
+            - name: {{ .secretKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.existingSecret }}
+                  key: {{ .secretKey }}
+                  optional: true
+            {{- end }}
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000

@@ -51,7 +51,24 @@ data:
         }
       },
       "agents": {
+        "ownership": "explicit",
+        "entries": {
+          "main": { "workspace": "~/.openclaw/workspace" }
+          {{- if .Values.gastos.enabled }},
+          "gastos": {
+            "workspace": "~/.openclaw/workspace-gastos",
+            "description": "Grupo de WhatsApp de gastos: pasa cada mensaje al CLI gastos",
+            "skills": [],
+            "tools": {
+              "allow": ["exec"],
+              "exec": { "mode": "allowlist" },
+              "fs": { "workspaceOnly": true }
+            }
+          }
+          {{- end }}
+        },
         "defaults": {
+          "systemAgent": { "agentId": "main" },
           "workspace": "~/.openclaw/workspace",
           "model": { "primary": {{ printf "ollama/%s" .Values.ollama.primaryModel | quote }} }
         }
@@ -102,6 +119,31 @@ data:
       }
       node[keys[keys.length - 1]] = want;
       changed.push(p);
+    }
+
+    // Grupos de WhatsApp (contextos): allowlist estricta + bindings, derivados de
+    // .Values.whatsappGroups y de los JID en el Secret. Reemplaza lo que haya en el PVC.
+    const wa = current.channels && current.channels.whatsapp;
+    if (wa) {
+      const spec = JSON.parse(process.env.WA_GROUPS_SPEC || "[]");
+      const groups = {};
+      const binds = [];
+      for (const g of spec) {
+        const jid = (process.env[g.env] || "").trim();
+        if (!/^[0-9-]+@g\.us$/.test(jid)) {
+          console.log(`aviso: grupo "${g.name}" sin JID válido en ${g.env}; no se admite`);
+          continue;
+        }
+        groups[jid] = { requireMention: false };
+        binds.push({ agentId: g.agent, comment: `grupo ${g.name}`,
+                     match: { channel: "whatsapp", peer: { kind: "group", id: jid } } });
+      }
+      binds.push({ agentId: "main", comment: "resto de WhatsApp (DM)", match: { channel: "whatsapp", accountId: "*" } });
+      const want = { groups, groupPolicy: Object.keys(groups).length ? "allowlist" : "disabled" };
+      for (const [k, v] of Object.entries(want)) {
+        if (JSON.stringify(wa[k]) !== JSON.stringify(v)) { wa[k] = v; changed.push(`channels.whatsapp.${k}`); }
+      }
+      if (JSON.stringify(current.bindings) !== JSON.stringify(binds)) { current.bindings = binds; changed.push("bindings"); }
     }
 
     if (changed.length === 0) {
