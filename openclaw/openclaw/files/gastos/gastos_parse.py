@@ -62,6 +62,9 @@ def parse(raw):
     lines = _html_lines(m)
     base = {"from": frm, "subject": subj, "email_date": date.isoformat() if date else None}
 
+    if frm == "contacto@servipag.cl" and "comprobante de pago" in subj.lower():
+        return parse_servipag(lines, base)
+
     if any(s in subj.lower() for s in IGNORAR):
         return {**base, "tipo": "ignorar"}
 
@@ -107,6 +110,46 @@ def parse(raw):
                 "comprobante": _after(lines, "Número de comprobante")}
 
     return {**base, "tipo": "desconocido", "motivo": "remitente/asunto no reconocido"}
+
+
+# --- comprobantes de Servipag ---------------------------------------------------------
+
+_VALOR = re.compile(r"^\$\s?([\d.]+)$")
+
+
+def parse_servipag(lines, base):
+    """Comprobante de Servipag: un pago (total, fecha, forma de pago) con 1+ cuentas (empresa, valor).
+    Forma "BCI" = botón de pago (BCI no avisa); "BCI Transferencia" = BCI avisa la transferencia."""
+    try:
+        i = next(k for k, l in enumerate(lines) if l.startswith("Usuario"))
+        d = next(k for k, l in enumerate(lines) if l.startswith("Detalle"))
+        j = next(k for k, l in enumerate(lines) if l.startswith("Recuerda"))
+    except StopIteration:
+        return {**base, "tipo": "desconocido", "motivo": "comprobante Servipag sin secciones"}
+    res = lines[i + 1:d]
+    fecha = next((x for x in res if re.fullmatch(r"\d{2}/\d{2}/\d{4}", x)), None)
+    hora = next((x for x in res if re.fullmatch(r"\d{2}:\d{2}", x)), None)
+    total = next((_VALOR.match(x) for x in res if _VALOR.match(x)), None)
+    k_total = next((k for k, x in enumerate(res) if _VALOR.match(x)), None)
+    consulta = res[k_total - 1] if k_total else None
+    forma = " ".join(res[k_total + 1:]).strip() if k_total is not None else ""
+    det = [l for l in lines[d + 1:j] if not re.match(r"^(Empresa|de pago|pago)\b", l)]
+    cuentas, nombre = [], []
+    k = 0
+    while k < len(det):
+        m = _VALOR.match(det[k])
+        if m:
+            # línea previa = identificador de cuenta; siguiente = código de autorización
+            empresa = " ".join(nombre[:-1]) if len(nombre) > 1 else (nombre[0] if nombre else "")
+            cuentas.append({"empresa": " ".join(empresa.split()), "valor": _n(m.group(1))})
+            nombre, k = [], k + 2
+            continue
+        nombre.append(det[k])
+        k += 1
+    if not (fecha and total and cuentas):
+        return {**base, "tipo": "desconocido", "motivo": "comprobante Servipag incompleto"}
+    return {**base, "tipo": "servipag", "fecha": fecha, "hora": hora, "monto": _n(total.group(1)),
+            "consulta": consulta, "forma_pago": forma, "cuentas": cuentas}
 
 
 # --- cartola cuenta corriente (PDF cifrado) -------------------------------------
