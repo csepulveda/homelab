@@ -1,0 +1,30 @@
+# Solo red privada: sin external-dns.kubernetes.io/target, external-dns publica
+# la IP privada del LoadBalancer de nginx (192.168.100.210), no enrutable desde
+# internet. El allowlist es una segunda capa por si se abre el puerto en el router.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.ingress.allowedSourceRanges | join "," | quote }}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  name: openclaw
+  namespace: openclaw
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: {{ .Values.ingress.host }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: openclaw
+            port:
+              number: 18789
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - {{ .Values.ingress.host }}
+    secretName: {{ .Values.ingress.host }}-tls

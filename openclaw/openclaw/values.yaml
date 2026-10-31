@@ -19,3 +19,11 @@ ollama:
 #   kubectl -n openclaw create secret generic openclaw-secrets \
 #     --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 existingSecret: openclaw-secrets
+
+ingress:
+  host: openclaw.csepulveda.net
+  allowedSourceRanges:
+    - 192.168.100.0/24
+  # CIDR de pods (cilium cluster-pool), desde donde llega ingress-nginx
+  trustedProxies:
+    - 10.42.0.0/16
