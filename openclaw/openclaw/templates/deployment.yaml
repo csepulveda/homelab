@@ -69,9 +69,15 @@ spec:
               mkdir -p /home/node/.openclaw/workspace
               [ -f /home/node/.openclaw/workspace/AGENTS.md ] || cp /config/AGENTS.md /home/node/.openclaw/workspace/AGENTS.md
               {{- if .Values.gastos.enabled }}
-              # agente "gastos" (grupo de WhatsApp): su AGENTS.md lo manda git
-              mkdir -p /home/node/.openclaw/workspace-gastos
-              cp /gastos/AGENTS-gastos.md /home/node/.openclaw/workspace-gastos/AGENTS.md
+              # agente "gastos" (grupo de WhatsApp): su AGENTS.md lo manda git. Respaldo si el plugin
+              # no responde; los archivos de "personalidad" que OpenClaw siembra se neutralizan.
+              W=/home/node/.openclaw/workspace-gastos
+              mkdir -p $W
+              cp /gastos/AGENTS-gastos.md $W/AGENTS.md
+              rm -f $W/BOOTSTRAP.md
+              printf "# SOUL.md\n\nPuente mecánico al comando gastos. Sin personalidad ni conversación. Sigue AGENTS.md.\n" > $W/SOUL.md
+              printf "# IDENTITY.md\n\n- Nombre: Gastos\n- Rol: ejecutar gastos responder y devolver su salida exacta.\n" > $W/IDENTITY.md
+              printf "# USER.md\n\nEl usuario registra gastos y espera la salida exacta del comando gastos.\n" > $W/USER.md
               # la skill ya no vive en el agente main
               rm -rf /home/node/.openclaw/workspace/skills/gastos
               {{- end }}
@@ -241,6 +247,9 @@ spec:
               value: /opt/gastos-tools/pypdf.whl
             - name: GASTOS_GOG_BIN
               value: /opt/gastos-tools/gog
+            # agentes cuyos grupos responde el plugin gastos-bridge directamente con el CLI
+            - name: GASTOS_BRIDGE_AGENTS
+              value: gastos
             - name: GOG_HOME
               value: /home/node/.openclaw/gog
             - name: GASTOS_STATE_DIR

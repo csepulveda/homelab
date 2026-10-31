@@ -78,10 +78,19 @@ data:
         "fs": { "workspaceOnly": true }
       },
       "session": {
-        "resetByType": {
-          "group": { "mode": "idle", "idleMinutes": 2 }
+        "resetByType": {}
+      },
+      {{- if .Values.gastos.enabled }}
+      "plugins": {
+        "load": { "paths": ["/opt/gastos-tools/gastos-bridge"] },
+        "entries": {
+          "gastos-bridge": {
+            "enabled": true,
+            "hooks": { "timeouts": { "before_dispatch": 300000 } }
+          }
         }
       },
+      {{- end }}
       "cron": { "enabled": true }
     }
   sync-config.js: |

@@ -428,10 +428,18 @@ def opciones_txt(ops):
     return "→ " + " · ".join(f"{NUM[i]} {o}" for i, o in enumerate(ops))
 
 
+def opciones_para(cat):
+    """Sugerida + 2 relacionadas, sin repetidos ni "Sin categoría"."""
+    base = [] if cat == "Sin categoría" else [cat]
+    out = []
+    for o in base + RELACIONADAS.get(cat, []) + ["Otros", "Compras", "Restaurantes", "Supermercado"]:
+        if o not in out and o != "Sin categoría":
+            out.append(o)
+    return out[:3]
+
+
 def pregunta(gid, item, cat):
-    ops = [cat] + [c for c in RELACIONADAS.get(cat, ["Otros", "Compras"]) if c != cat][:2]
-    if cat == "Sin categoría":
-        ops = ["Restaurantes", "Compras", "Supermercado"]
+    ops = opciones_para(cat)
     hora = f" {item['hora']}" if item.get("hora") else ""
     if item["tipo"] == "transferencia":
         head = (f"🤔 {gid}: transferiste {clp(item['monto'])} a {item['contraparte']} "
@@ -617,6 +625,11 @@ def aplicar(sh, st, gid, cat, fijo, quien="usuario"):
     return msg
 
 
+def argparse_ns(**kw):
+    import argparse
+    return argparse.Namespace(**kw)
+
+
 AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
          "• \"pendientes\": lo que falta confirmar\n"
          "• \"G12 1\", \"T3 arriendo fijo\", \"G15 farmacia\": responder una pregunta\n"
@@ -626,6 +639,20 @@ AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
 
 
 def cmd_responder(args):
+    # Varias líneas con ID ("C6 1\nC15 servicios básicos"): una respuesta por línea.
+    lineas = [l.strip() for l in " ".join(args.texto).splitlines() if l.strip()]
+    if len(lineas) > 1 and sum(bool(re.match(r"[GTCgtc]\d{1,5}\b", l)) for l in lineas) >= 2:
+        import contextlib
+        import io
+        salidas = []
+        for l in lineas:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                cmd_responder(argparse_ns(texto=[l]))
+            salidas.append(buf.getvalue().strip().split("\nQuedan ")[0])
+        n = len(State().d["pendientes"])
+        print("\n".join(salidas) + (f"\nQuedan {n} pendientes." if n else "\nNo quedan pendientes. ✨"))
+        return
     texto = " ".join(args.texto).strip()
     # El agente pasa el mensaje "textual"; a veces con sellos del canal al inicio
     # ("[Sat 2026-10-31 14:11 GMT-3] pendientes"). Se quitan antes de interpretar.
@@ -748,8 +775,10 @@ def cmd_pendientes(args):
     lines = [f"📋 {len(pend)} gastos por confirmar" + (" (resumen del día)" if args.recordatorio else "") + ":"]
     for gid, p in pend[:10]:
         mas = f" (+{len(p['tambien'])} más)" if p.get("tambien") else ""
+        ops = p.get("opciones") or []
+        ops = opciones_para(p["sugerida"]) if len(set(ops)) < len(ops) or "Sin categoría" in ops or not ops else ops
         lines.append(f"{gid} · {clp(p.get('monto', 0))} · {p['contraparte']} · {p.get('fecha', '')}{mas}\n"
-                     + opciones_txt(p.get("opciones") or [p["sugerida"]]))
+                     + opciones_txt(ops))
     if len(pend) > 10:
         lines.append(f"…y {len(pend) - 10} más.")
     lines.append("Responde uno por mensaje, por ejemplo: G1 2 · T1 préstamo · T3 arriendo fijo")
@@ -947,7 +976,7 @@ def cmd_cartola(args):
                     continue
                 pend_clave[item["contraparte"]] = gid
                 n_preg += 1
-                st.d["pendientes"][gid] = {"opciones": [cat] + RELACIONADAS.get(cat, ["Otros", "Compras"])[:2],
+                st.d["pendientes"][gid] = {"opciones": opciones_para(cat),
                                            "sugerida": cat, "contraparte": item["contraparte"], "tipo": "Cartola",
                                            "clave": item["contraparte"], "preguntado": now(),
                                            "monto": mv["monto"], "fecha": mv["fecha"], "tambien": []}
