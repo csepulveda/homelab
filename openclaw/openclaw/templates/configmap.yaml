@@ -77,6 +77,11 @@ data:
         "exec": { "mode": "allowlist" },
         "fs": { "workspaceOnly": true }
       },
+      "session": {
+        "resetByType": {
+          "group": { "mode": "idle", "idleMinutes": 2 }
+        }
+      },
       "cron": { "enabled": true }
     }
   sync-config.js: |

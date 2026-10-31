@@ -39,6 +39,9 @@ managedConfigPaths:
   - agents.ownership
   - agents.entries
   - agents.defaults.systemAgent
+  # grupos (agente gastos): sesión nueva tras 2 min sin mensajes; el estado vive en el CLI y el
+  # historial largo hacía que el modelo respondiera por su cuenta en vez de ejecutar el comando
+  - session.resetByType
 
 # Grupos de WhatsApp = contextos, cada uno con su agente. Claw SOLO admite estos grupos:
 # sync-config reescribe channels.whatsapp.groups (allowlist estricta, sin "*") y los
