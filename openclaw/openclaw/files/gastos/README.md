@@ -39,7 +39,8 @@ kubectl -n openclaw exec deploy/openclaw -c gateway -- gastos init
 kubectl -n openclaw exec deploy/openclaw -c gateway -- gastos sync --backfill --dias 120
 kubectl -n openclaw exec deploy/openclaw -c gateway -- gastos cartola --backfill --dias 130
 
-# 4. Crons (quedan en el estado del PVC). TO = número de WhatsApp en E.164
+# 4. Crons (quedan en el estado del PVC)
+TO="+569XXXXXXXX"   # número de WhatsApp en E.164 (el mismo de channels.whatsapp.allowFrom)
 oc automations create "*/2 * * * *" --name "gastos: sync" --tz America/Santiago \
   --command-argv '["/opt/gastos/gastos","sync"]' --timeout-seconds 300 --announce --channel whatsapp --to "$TO"
 oc automations create "0 10 * * *" --name "gastos: cartola" --tz America/Santiago \

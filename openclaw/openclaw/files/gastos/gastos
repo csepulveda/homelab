@@ -14,6 +14,7 @@ La salida estándar se entrega tal cual por WhatsApp (cron announce / respuesta 
 """
 import base64
 import datetime as dt
+import fcntl
 import json
 import os
 import re
@@ -191,13 +192,22 @@ class Sheet:
         r = gog("sheets", "get", SHEET, f"{tab}!A:{chr(64 + cols)}", "--render", "FORMATTED_VALUE")
         return r.get("values", []) if isinstance(r, dict) else []
 
+    @staticmethod
+    def _safe(rows):
+        """USER_ENTERED evalúa texto que empiece con = + - @ como fórmula: anteponer '."""
+        return [[("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in r] for r in rows]
+
     def append(self, tab, rows):
+        rows = self._safe(rows)
         if rows:
+            # OVERWRITE usa las filas vacías ya formateadas; INSERT_ROWS crea filas que heredan
+            # el formato del encabezado (las fechas quedaban como número de serie).
             gog("sheets", "append", SHEET, f"{tab}!A:A", "--values-json", json.dumps(rows, ensure_ascii=False),
-                "--insert", "INSERT_ROWS", "--input", "USER_ENTERED")
+                "--insert", "OVERWRITE", "--input", "USER_ENTERED")
             self._gastos = None
 
     def update(self, rng, rows):
+        rows = self._safe(rows)
         gog("sheets", "update", SHEET, rng, "--values-json", json.dumps(rows, ensure_ascii=False),
             "--input", "USER_ENTERED")
         self._gastos = None
@@ -246,6 +256,22 @@ class Sheet:
         return nxt
 
 
+FORMATOS = {
+    "Gastos": (("B", "DATE", "dd/mm/yyyy"), ("C", "TIME", "hh:mm"), ("D", "CURRENCY", "$#,##0"),
+               ("O", "DATE_TIME", "dd/mm/yyyy hh:mm")),
+    "Reglas": (("G", "DATE_TIME", "dd/mm/yyyy hh:mm"),),
+    "Cartolas": (("A", "DATE", "dd/mm/yyyy"), ("B", "DATE", "dd/mm/yyyy"), ("C", "CURRENCY", "$#,##0"),
+                 ("D", "CURRENCY", "$#,##0"), ("H", "DATE_TIME", "dd/mm/yyyy hh:mm")),
+}
+
+
+def formatos(*tabs):
+    """Formato de fecha/hora/moneda por columna completa (idempotente; se reaplica tras escribir)."""
+    for tab in tabs or FORMATOS:
+        for col, typ, pat in FORMATOS[tab]:
+            gog("sheets", "number-format", SHEET, f"{tab}!{col}2:{col}", "--type", typ, "--pattern", pat, parse=False)
+
+
 def cmd_init(_args):
     meta = gog("sheets", "metadata", SHEET)
     tabs = [s["properties"]["title"] for s in meta["sheets"]]
@@ -261,11 +287,7 @@ def cmd_init(_args):
     for tab, cols in (("Gastos", GASTOS_COLS), ("Reglas", REGLAS_COLS), ("Cartolas", CARTOLAS_COLS)):
         if not sh.rows(tab, len(cols)):
             sh.update(f"{tab}!A1:{chr(64 + len(cols))}1", [cols])
-    for rng, typ, pat in (("Gastos!B2:B", "DATE", "dd/mm/yyyy"), ("Gastos!C2:C", "TIME", "hh:mm"),
-                          ("Gastos!D2:D", "CURRENCY", "$#,##0"), ("Gastos!O2:O", "DATE_TIME", "dd/mm/yyyy hh:mm"),
-                          ("Reglas!G2:G", "DATE_TIME", "dd/mm/yyyy hh:mm"), ("Cartolas!A2:B", "DATE", "dd/mm/yyyy"),
-                          ("Cartolas!C2:D", "CURRENCY", "$#,##0"), ("Cartolas!H2:H", "DATE_TIME", "dd/mm/yyyy hh:mm")):
-        gog("sheets", "number-format", SHEET, rng, "--type", typ, "--pattern", pat, parse=False)
+    formatos()
     for tab in ("Gastos", "Reglas", "Cartolas"):
         gog("sheets", "freeze", SHEET, "--sheet", tab, "--rows", "1", parse=False)
     print("Planilla lista: pestañas Gastos, Reglas y Cartolas.")
@@ -410,7 +432,12 @@ def fila(gid, item, cat, fijo, estado, fuente, origen):
     if item.get("programada"):
         detalle = (detalle + " (programada)").strip()
     cuenta = item.get("tarjeta") or item.get("cuenta4") or ""
-    return [gid, item["fecha"], item.get("hora") or "", item["monto"], tipo, item["contraparte"], cat,
+    monto = item["monto"]
+    if item.get("moneda", "CLP") != "CLP":
+        # Monto es CLP: lo extranjero va al detalle; el cargo en pesos lo trae la cartola.
+        detalle = f"{item['moneda']} {item['monto']} · {detalle}".strip(" ·")
+        monto, estado = "", "revisar"
+    return [gid, item["fecha"], item.get("hora") or "", monto, tipo, item["contraparte"], cat,
             "sí" if fijo else "", detalle, f"****{cuenta}" if cuenta else "", estado, fuente, "", origen, now()]
 
 
@@ -423,7 +450,7 @@ def cmd_sync(args):
     nxt = sh.ids()
     msgs, rows, cache, nuevos = [], [], {}, 0
     pend_clave = {norm(p["clave"]): g for g, p in st.d["pendientes"].items()}
-    for mid in reversed(search(SENDERS, dias)):  # más antiguos primero
+    for mid in reversed(search(SENDERS, dias, maximo=5000 if args.backfill else 200)):  # más antiguos primero
         if mid in ign or mid in vistos:
             continue
         p = gp.parse(raw(mid))
@@ -466,6 +493,8 @@ def cmd_sync(args):
             msgs.append(f"✓ {gid}: {clp(p['monto'])} {p['contraparte']} → {cat}")
     for i in range(0, len(rows), 100):
         sh.append("Gastos", rows[i:i + 100])
+    if rows:
+        formatos("Gastos")
     st.d["ignorados"] = sorted(ign)[-2000:]
     st.save()
     if args.backfill:
@@ -626,13 +655,22 @@ def cmd_cartola(args):
         pdf = gp.cartola_pdf(raw(mid))
         if not pdf:
             continue
-        c = gp.parse_cartola(pdf, pwd)
-        desde, hasta = c["periodo"]
-        if not c["cuadra"]:
-            out.append(f"⚠️ Cartola {desde} → {hasta} NO cuadra con su resumen "
-                       f"(cargos {clp(c['cargos'])} vs {clp(c['resumen_cargos'] or 0)}). No registré nada; revisar parser.")
-            st.d["cartolas"].append(mid)
+        alertadas = st.d.setdefault("cartolas_alertadas", [])
+        try:
+            c = gp.parse_cartola(pdf, pwd)
+            problema = None if c["cuadra"] else (
+                f"no cuadra con su resumen (cargos {clp(c['cargos'])} vs {clp(c['resumen_cargos'] or 0)})")
+        except ValueError as e:
+            c, problema = None, str(e)
+        if problema:
+            # No se marca como procesada: se reintenta cada día (p.ej. después de arreglar el parser),
+            # pero se avisa una sola vez.
+            if mid not in alertadas:
+                alertadas.append(mid)
+                st.save()
+                out.append(f"⚠️ Cartola: {problema}. No registré nada; hay que revisar el parser.")
             continue
+        desde, hasta = c["periodo"]
         d0, d1 = _fecha(desde.replace("-", "/")), _fecha(hasta.replace("-", "/"))
         # filas de correo dentro del período, por conciliar
         filas = []
@@ -642,7 +680,8 @@ def cmd_cartola(args):
                 f = _fecha(r[1])
             except ValueError:
                 continue
-            if r[11] == "correo" and not r[12] and d0 <= f <= d1 + dt.timedelta(days=3):
+            # ±3 días en ambos bordes: el banco contabiliza la compra uno o más días después
+            if r[11] == "correo" and not r[12] and d0 - dt.timedelta(days=3) <= f <= d1 + dt.timedelta(days=3):
                 filas.append({"row": i, "fecha": f, "monto": num(r[3]),
                               "tipo": r[4], "usada": False})
         reglas = sh.reglas()
@@ -719,6 +758,7 @@ def cmd_cartola(args):
                 continue
             if d0 <= f <= d1 and r[4] != "Ingreso" and r[6] not in NO_GASTO:
                 gasto += num(r[3])
+        formatos("Gastos", "Cartolas")
         sh.append("Cartolas", [[desde.replace("-", "/"), hasta.replace("-", "/"), c["cargos"], c["abonos"],
                                 "sí", len(c["movimientos"]), len(nuevas), now()]])
         st.d["cartolas"].append(mid)
@@ -752,6 +792,19 @@ def main():
     a = ap.parse_args()
     if not SHEET or not ACCOUNT:
         sys.exit("Faltan GASTOS_SHEET_ID / GASTOS_ACCOUNT")
+    # Un comando a la vez: el cron (sync cada 2 min) y las respuestas del agente leen y
+    # escriben state.json; sin lock uno pisa los cambios del otro.
+    os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+    lock = open(os.path.join(STATE_DIR, ".lock"), "w")
+    deadline = time.time() + 240
+    while True:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except BlockingIOError:
+            if time.time() > deadline:
+                sys.exit("gastos: otro proceso sigue corriendo (lock ocupado)")
+            time.sleep(1)
     {"init": cmd_init, "sync": cmd_sync, "cartola": cmd_cartola, "responder": cmd_responder,
      "corregir": cmd_corregir, "pendientes": cmd_pendientes}[a.cmd](a)
 

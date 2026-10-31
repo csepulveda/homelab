@@ -137,8 +137,12 @@ def parse_cartola(pdf_bytes, password):
         raise ValueError("contraseña de cartola incorrecta")
     txt = "\n".join(p.extract_text() for p in r.pages)
     per = re.search(r"PERIODO\s*:\s*(\d{2}-\d{2}-\d{4}) al (\d{2}-\d{2}-\d{4})", txt)
-    prev = _n(re.search(r"Saldo Anterior\s*\n\s*(-?[\d.]+)", txt).group(1))
+    ant = re.search(r"Saldo Anterior\s*\n\s*(-?[\d.]+)", txt)
     tot = re.search(r"Cheques\s*\n\s*([\d.]+) \+\s*\nTotal Abonos y\s*\nDepositos\s*\n\s*([\d.]+)", txt)
+    faltan = [n for n, m in (("PERIODO", per), ("Saldo Anterior", ant), ("totales del resumen", tot)) if not m]
+    if faltan:
+        raise ValueError("formato de cartola no reconocido (falta " + ", ".join(faltan) + ")")
+    prev = _n(ant.group(1))
     movs, sin_cuadrar = [], 0
     for line in txt.splitlines():
         m = _ROW.match(line.strip())
