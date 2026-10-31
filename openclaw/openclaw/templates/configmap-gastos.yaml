@@ -1,0 +1,39 @@
+{{- if .Values.gastos.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-gastos
+  namespace: openclaw
+data:
+  gastos: |-
+{{ .Files.Get "files/gastos/gastos" | indent 4 }}
+  gastos_parse.py: |-
+{{ .Files.Get "files/gastos/gastos_parse.py" | indent 4 }}
+  SKILL.md: |-
+{{ .Files.Get "files/gastos/SKILL.md" | indent 4 }}
+  # Descarga gog y pypdf verificando sha256; cache en el PVC, copia a un emptyDir
+  # que el gateway monta read-only (el agente no puede reemplazar los binarios).
+  # Si la descarga falla (sin cache y sin internet) el gateway arranca igual: WhatsApp no
+  # depende de esto; los comandos de gastos fallarán hasta el próximo reinicio.
+  install-tools.sh: |
+    set -u
+    C=/home/node/.openclaw/.cache/gastos-tools
+    mkdir -p "$C"
+    fetch() {
+      if ! echo "$2  $C/$3" | sha256sum -c - >/dev/null 2>&1; then
+        curl -fsSL --connect-timeout 10 --max-time 120 --retry 2 -o "$C/$3.tmp" "$1" &&
+          echo "$2  $C/$3.tmp" | sha256sum -c - &&
+          mv "$C/$3.tmp" "$C/$3" || { rm -f "$C/$3.tmp"; echo "gastos-tools: no pude descargar $3"; return 1; }
+      fi
+    }
+    fetch "{{ .Values.gastos.gog.url }}" "{{ .Values.gastos.gog.sha256 }}" gog.tar.gz || exit 0
+    fetch "{{ .Values.gastos.pypdf.url }}" "{{ .Values.gastos.pypdf.sha256 }}" pypdf.whl || exit 0
+    set -e
+    # el emptyDir sobrevive a reinicios del sandbox: los archivos 0555/0444 anteriores bloquearían cp
+    rm -f /tools/gog /tools/pypdf.whl
+    tar -xzf "$C/gog.tar.gz" -C /tools ./gog
+    cp "$C/pypdf.whl" /tools/pypdf.whl
+    chmod 0555 /tools/gog
+    chmod 0444 /tools/pypdf.whl
+    echo "gastos-tools: gog y pypdf verificados"
+{{- end }}

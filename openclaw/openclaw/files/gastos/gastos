@@ -1,0 +1,813 @@
+#!/usr/bin/env python3
+"""gastos: registra compras/transferencias BCI desde Gmail en Google Sheets.
+
+Subcomandos:
+  init                         crea pestañas y encabezados en la planilla
+  sync [--dias N] [--backfill] lee correos nuevos, registra y pregunta lo dudoso
+  cartola [--dias N]           procesa cartolas: cuadra, concilia y agrega lo que falta
+  responder <texto>            aplica la respuesta del usuario a una pregunta pendiente
+  corregir <ID> <texto>        cambia la categoría de un movimiento ya registrado
+  pendientes [--recordatorio]  lista lo que falta confirmar
+
+La salida estándar se entrega tal cual por WhatsApp (cron announce / respuesta del agente).
+"NO_REPLY" = no enviar nada.
+"""
+import base64
+import datetime as dt
+import fcntl
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import unicodedata
+import urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import gastos_parse as gp  # noqa: E402
+
+ENV = os.environ.get
+SHEET = ENV("GASTOS_SHEET_ID", "")
+ACCOUNT = ENV("GASTOS_ACCOUNT", "")
+OLLAMA = ENV("GASTOS_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat"
+MODEL = ENV("GASTOS_MODEL", "gemma4:26b")
+NUM_CTX = int(ENV("GASTOS_NUM_CTX", "32768"))  # igual que OpenClaw: otro valor recarga el modelo
+UMBRAL = float(ENV("GASTOS_UMBRAL", "0.9"))
+APRENDIZAJE_DIAS = int(ENV("GASTOS_APRENDIZAJE_DIAS", "14"))
+# En backfill solo se pregunta por WhatsApp lo dudoso desde este monto; lo menor queda "revisar" en la planilla.
+BACKFILL_MIN = int(ENV("GASTOS_BACKFILL_MIN", "50000"))
+OWN_NAMES = [n.strip().lower() for n in ENV("GASTOS_OWN_NAMES", "").split(",") if n.strip()]
+STATE_DIR = ENV("GASTOS_STATE_DIR", os.path.expanduser("~/.openclaw/gastos"))
+SECRETS = ENV("GASTOS_SECRETS_DIR", "/run/secrets/gastos")
+GOG = ENV("GASTOS_GOG_BIN", "gog")
+TZ = dt.timezone(dt.timedelta(hours=-3))  # solo para timestamps "Registrado"
+
+SENDERS = "from:(contacto@bci.cl OR transferencias@bci.cl)"
+CARTOLA_Q = 'from:bcimail@bci.cl subject:"Cartola Cuenta Corriente" has:attachment'
+
+GASTOS_COLS = ["ID", "Fecha", "Hora", "Monto", "Tipo", "Contraparte", "Categoría", "Fijo", "Detalle",
+               "Cuenta/Tarjeta", "Estado", "Fuente", "Conciliado", "Origen", "Registrado"]
+REGLAS_COLS = ["Tipo", "Clave", "Categoría", "Fijo", "Preguntar siempre", "Origen", "Actualizado"]
+CARTOLAS_COLS = ["Desde", "Hasta", "Cargos", "Abonos", "Cuadra", "Movimientos", "Agregados", "Procesado"]
+
+# Categorías y descripciones (las mismas del benchmark, prompt "fewshot").
+CATS = {
+    "Supermercado": "supermercados, almacenes, minimarkets, verdulerías, carnicerías",
+    "Restaurantes": "restaurantes, cafés, bares, comida rápida, delivery (Rappi, Uber Eats, PedidosYa)",
+    "Transporte": "Uber, Cabify, Didi, metro, bus, estacionamientos, peajes, TAG, lavado y mantención de auto",
+    "Combustible": "bencineras: Copec, Shell, Aramco/Petrobras, Pronto Copec, Enex",
+    "Servicios básicos": "luz (Enel), agua (Aguas Andinas), gas (Abastible, Lipigas, Metrogas), gastos comunes",
+    "Telefonía/Internet": "WOM, Entel, Movistar, Claro, VTR, Mundo, recargas de celular",
+    "Salud": "farmacias (Cruz Verde, Ahumada, Salcobrand), clínicas, médicos, dentistas, exámenes",
+    "Seguros": "seguros y PAC de aseguradoras (Metlife, BCI Seguros, Consorcio)",
+    "Suscripciones": "Netflix, Spotify, apps, software, cloud, streaming, juegos online",
+    "Entretención": "cine, eventos, entradas, panoramas, viajes, hoteles",
+    "Compras": "retail, ropa, tecnología, tiendas online, Mercado Libre, regalos",
+    "Hogar": "ferreterías y mejoramiento del hogar (Easy, Sodimac), muebles, arriendo, bodegaje, aseo",
+    "Cuidado personal": "peluquería, barbería, spa, masajes, gimnasio",
+    "Educación": "colegios, cursos, universidades, libros",
+    "Mascotas": "veterinarias, pet shops",
+    "Impuestos/Trámites": "municipalidad, permisos, multas, SII, notarías",
+    "Traspaso propio": "NO es gasto: transferencias a otra cuenta del mismo titular, ahorro, inversión",
+    "Pago tarjeta": "NO es gasto: pago de tarjeta de crédito (el gasto ya se registró en la tarjeta)",
+    "Persona": "transferencia a una persona natural sin contexto claro (préstamo, pago compartido, etc.)",
+    "Otros": "cualquier otra cosa",
+}
+# Solo por reglas (el modelo no las propone).
+EXTRA_CATS = ["Préstamo", "Costo bancario", "Efectivo", "Ingreso", "Sin categoría"]
+ALL_CATS = list(CATS) + EXTRA_CATS
+NO_GASTO = {"Traspaso propio", "Pago tarjeta", "Préstamo", "Ingreso"}
+RELACIONADAS = {
+    "Restaurantes": ["Supermercado", "Entretención"], "Supermercado": ["Restaurantes", "Hogar"],
+    "Persona": ["Préstamo", "Restaurantes"], "Compras": ["Hogar", "Otros"], "Hogar": ["Compras", "Servicios básicos"],
+    "Cuidado personal": ["Salud", "Entretención"], "Entretención": ["Restaurantes", "Compras"],
+    "Transporte": ["Combustible", "Otros"], "Salud": ["Cuidado personal", "Compras"],
+}
+
+# Reglas fijas: (regex sobre contraparte+mensaje normalizados, categoría). Ver benchmark.
+FIJAS = [
+    (r"\bKHIPU\b.*\bTARJETA\b|\bPAGO TARJETA\b|\bTARJETA LIDER\b", "Pago tarjeta"),
+    (r"\b(AHUM|AHUMADA|CRUZ VERDE|C\. ?VERDE|SALCOBRAND|DR\. ?SIMI)\b", "Salud"),
+    (r"\b(COPEC APP|SHELL|PRONTO COPEC|ARAMCO|PETROBRAS|ENEX|ESTACION DE SERV)\b", "Combustible"),
+    (r"\b(LIDER|JUMBO|UNIMARC|SANTA ISABEL|TOTTUS|ACUENTA|MAYORISTA 10)\b", "Supermercado"),
+    (r"\b(WOM|ENTEL|MOVISTAR|CLARO|VTR)\b", "Telefonía/Internet"),
+    (r"\b(PARKING|ESTACIONAMIENTO|AKIPARK|SABA)\b", "Transporte"),
+    (r"\b(EASY|SODIMAC|CONSTRUMART)\b", "Hogar"),
+    (r"\b(CINEMARK|CINE HOYTS|CINEPLANET)\b", "Entretención"),
+    (r"\bMUNICIPALIDAD\b", "Impuestos/Trámites"),
+    # cartola
+    (r"^PAC (METLIFE|BCI SEGUROS|CONSORCIO|ZURICH|SURA)", "Seguros"),
+    (r"^GIRO CAJ", "Efectivo"),
+    (r"^(COMISION|IMPUESTO)\b", "Costo bancario"),
+]
+# Pasarelas: el prefijo no dice el rubro -> siempre se pregunta la primera vez.
+PASARELAS = r"^(MERCADOPAGO|MERPAGO|TUU|SUMUP|PAYSCAN|FLOW|KHIPU|FINTOC|PAYPAL)\b"
+# Movimientos internos de la cartola que no se registran como gasto ni ingreso.
+INTERNOS = r"TRASPASO DESDE LINEA SOBREGIRO|AMORTIZACION LINEA DE SOBREGIRO"
+
+
+# --- utilidades ----------------------------------------------------------------
+
+def norm(s):
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
+    return " ".join(s.upper().split())
+
+
+def now():
+    return dt.datetime.now(TZ).strftime("%d/%m/%Y %H:%M")
+
+
+def clp(n):
+    return "$" + f"{int(n):,}".replace(",", ".")
+
+
+def num(v):
+    return int(re.sub(r"[^\d]", "", str(v)) or 0)
+
+
+# Descripciones de cartola que no identifican el destino: siempre preguntar, nunca guardar regla.
+GENERICOS = r"^(PAGO CUENTAS VIA INTERNET|COMPRA TARJETA DEBITO)$"
+
+
+def secret(name):
+    with open(os.path.join(SECRETS, name)) as f:
+        return f.read().strip()
+
+
+def gog(*args, parse=True, retries=5):
+    env = dict(os.environ, GOG_HOME=ENV("GOG_HOME", os.path.expanduser("~/.openclaw/gog")),
+               GOG_KEYRING_BACKEND="file", GOG_KEYRING_PASSWORD=secret("GOG_KEYRING_PASSWORD"),
+               GOG_ACCOUNT=ACCOUNT)
+    cmd = [GOG, "--gmail-no-send", "--enable-commands", "gmail.messages.search,gmail.raw,sheets", *args]
+    if parse:
+        cmd.append("--json")
+    for i in range(retries):
+        p = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=120)
+        if p.returncode == 0:
+            return json.loads(p.stdout) if parse and p.stdout.strip() else p.stdout
+        if "rateLimit" in p.stdout + p.stderr or "429" in p.stderr:
+            time.sleep(10 * (i + 1))
+            continue
+        raise RuntimeError(f"gog {' '.join(args[:3])}: {(p.stderr or p.stdout)[-400:]}")
+    raise RuntimeError("gog: demasiados reintentos por cuota")
+
+
+class State:
+    """Estado local (fuera del workspace del agente): ids ignorados, preguntas pendientes, contadores."""
+
+    def __init__(self):
+        os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+        self.path = os.path.join(STATE_DIR, "state.json")
+        try:
+            with open(self.path) as f:
+                self.d = json.load(f)
+        except FileNotFoundError:
+            self.d = {}
+        self.d.setdefault("ignorados", [])
+        self.d.setdefault("pendientes", {})  # id -> {sugerida, opciones, contraparte, tipo, clave, preguntado}
+        self.d.setdefault("cartolas", [])
+        self.d.setdefault("inicio", dt.date.today().isoformat())
+        self.d.setdefault("ultima_pregunta", None)
+
+    def save(self):
+        tmp = self.path + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(self.d, f, ensure_ascii=False, indent=1)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, self.path)
+
+    @property
+    def aprendiendo(self):
+        return (dt.date.today() - dt.date.fromisoformat(self.d["inicio"])).days < APRENDIZAJE_DIAS
+
+
+# --- planilla ------------------------------------------------------------------
+
+class Sheet:
+    def __init__(self):
+        self._gastos = None
+
+    def rows(self, tab, cols):
+        r = gog("sheets", "get", SHEET, f"{tab}!A:{chr(64 + cols)}", "--render", "FORMATTED_VALUE")
+        return r.get("values", []) if isinstance(r, dict) else []
+
+    @staticmethod
+    def _safe(rows):
+        """USER_ENTERED evalúa texto que empiece con = + - @ como fórmula: anteponer '."""
+        return [[("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in r] for r in rows]
+
+    def append(self, tab, rows):
+        rows = self._safe(rows)
+        if rows:
+            # OVERWRITE usa las filas vacías ya formateadas; INSERT_ROWS crea filas que heredan
+            # el formato del encabezado (las fechas quedaban como número de serie).
+            gog("sheets", "append", SHEET, f"{tab}!A:A", "--values-json", json.dumps(rows, ensure_ascii=False),
+                "--insert", "OVERWRITE", "--input", "USER_ENTERED")
+            self._gastos = None
+
+    def update(self, rng, rows):
+        rows = self._safe(rows)
+        gog("sheets", "update", SHEET, rng, "--values-json", json.dumps(rows, ensure_ascii=False),
+            "--input", "USER_ENTERED")
+        self._gastos = None
+
+    def gastos(self):
+        if self._gastos is None:
+            self._gastos = self.rows("Gastos", len(GASTOS_COLS))
+        return self._gastos
+
+    def find(self, gid):
+        for i, r in enumerate(self.gastos()):
+            if r and r[0] == gid:
+                return i + 1, r
+        return None, None
+
+    def reglas(self):
+        out = {}
+        for r in self.rows("Reglas", len(REGLAS_COLS))[1:]:
+            r = r + [""] * (len(REGLAS_COLS) - len(r))
+            if r[1]:
+                out[(r[0], norm(r[1]))] = {"cat": r[2], "fijo": r[3].lower() in ("sí", "si", "true", "x"),
+                                          "preguntar": r[4].lower() in ("sí", "si", "true", "x")}
+        return out
+
+    def set_regla(self, tipo, clave, cat, fijo, origen):
+        rows = self.rows("Reglas", len(REGLAS_COLS))
+        vals = [tipo, clave, cat, "sí" if fijo else "", "", origen, now()]
+        for i, r in enumerate(rows[1:], start=2):
+            if len(r) > 1 and r[0] == tipo and norm(r[1]) == norm(clave):
+                vals[4] = r[4] if len(r) > 4 else ""
+                self.update(f"Reglas!A{i}:G{i}", [vals])
+                return
+        self.append("Reglas", [vals])
+
+    def ids(self):
+        """Generador de IDs por prefijo a partir de lo que ya hay en la planilla (una sola lectura)."""
+        last = {}
+        for r in self.gastos()[1:]:
+            m = re.fullmatch(r"([GTC])(\d+)", r[0]) if r else None
+            if m:
+                last[m.group(1)] = max(last.get(m.group(1), 0), int(m.group(2)))
+
+        def nxt(prefix):
+            last[prefix] = last.get(prefix, 0) + 1
+            return f"{prefix}{last[prefix]}"
+        return nxt
+
+
+FORMATOS = {
+    "Gastos": (("B", "DATE", "dd/mm/yyyy"), ("C", "TIME", "hh:mm"), ("D", "CURRENCY", "$#,##0"),
+               ("O", "DATE_TIME", "dd/mm/yyyy hh:mm")),
+    "Reglas": (("G", "DATE_TIME", "dd/mm/yyyy hh:mm"),),
+    "Cartolas": (("A", "DATE", "dd/mm/yyyy"), ("B", "DATE", "dd/mm/yyyy"), ("C", "CURRENCY", "$#,##0"),
+                 ("D", "CURRENCY", "$#,##0"), ("H", "DATE_TIME", "dd/mm/yyyy hh:mm")),
+}
+
+
+def formatos(*tabs):
+    """Formato de fecha/hora/moneda por columna completa (idempotente; se reaplica tras escribir)."""
+    for tab in tabs or FORMATOS:
+        for col, typ, pat in FORMATOS[tab]:
+            gog("sheets", "number-format", SHEET, f"{tab}!{col}2:{col}", "--type", typ, "--pattern", pat, parse=False)
+
+
+def cmd_init(_args):
+    meta = gog("sheets", "metadata", SHEET)
+    tabs = [s["properties"]["title"] for s in meta["sheets"]]
+    if "Gastos" not in tabs:
+        if tabs == ["Hoja 1"] or tabs == ["Sheet1"]:
+            gog("sheets", "rename-tab", SHEET, tabs[0], "Gastos", parse=False)
+        else:
+            gog("sheets", "add-tab", SHEET, "Gastos", parse=False)
+    for t in ("Reglas", "Cartolas"):
+        if t not in tabs:
+            gog("sheets", "add-tab", SHEET, t, parse=False)
+    sh = Sheet()
+    for tab, cols in (("Gastos", GASTOS_COLS), ("Reglas", REGLAS_COLS), ("Cartolas", CARTOLAS_COLS)):
+        if not sh.rows(tab, len(cols)):
+            sh.update(f"{tab}!A1:{chr(64 + len(cols))}1", [cols])
+    formatos()
+    for tab in ("Gastos", "Reglas", "Cartolas"):
+        gog("sheets", "freeze", SHEET, "--sheet", tab, "--rows", "1", parse=False)
+    print("Planilla lista: pestañas Gastos, Reglas y Cartolas.")
+
+
+# --- categorización --------------------------------------------------------------
+
+def clave(item):
+    if item["tipo"] == "transferencia":
+        # sin el banco: BCI lo escribe distinto en transferencias normales y programadas
+        return f"{item['contraparte']}|{item.get('cuenta4') or ''}"
+    return item["contraparte"]
+
+
+def tipo_regla(item):
+    return "Transferencia" if item["tipo"] == "transferencia" else "Compra"
+
+
+def es_propio(item):
+    n = norm(item["contraparte"]).lower()
+    return any(o and all(w in n for w in norm(o).lower().split()) for o in OWN_NAMES)
+
+
+def regla_fija(texto):
+    t = norm(texto)
+    for rx, cat in FIJAS:
+        if re.search(rx, t):
+            return cat
+    return None
+
+
+def llm_system():
+    desc = "\n".join(f"- {k}: {v}" for k, v in CATS.items())
+    propios = " o ".join(f"'{n}'" for n in OWN_NAMES) or "el titular"
+    return ("Clasificas movimientos de una cuenta corriente chilena para el control de gastos del titular.\n"
+            f"Categorías:\n{desc}\n\n"
+            "Reglas:\n"
+            "- Los nombres de comercio vienen truncados por el banco (ej. 'HIP LIDER BUENAVE' = Hipermercado Líder Buenaventura).\n"
+            "- Prefijos de pasarelas de pago (MERCADOPAGO*, TUU*, SUMUP*, FLOW*, KHIPU) NO indican el rubro: "
+            "fíjate en el resto del nombre; si no se puede saber, confianza baja.\n"
+            "- 'confianza' es la probabilidad de que la categoría sea correcta. Usa < 0.6 si el nombre es ambiguo, "
+            "es una persona, o no conoces el comercio. No inventes.\n"
+            f"- Transferencias a {propios} = Traspaso propio.\n"
+            "Responde SOLO JSON: {\"categoria\": \"<una de la lista>\", \"confianza\": <0..1>}\n\n"
+            "Ejemplos:\n"
+            "JUMBO ALTO LAS CO -> {\"categoria\":\"Supermercado\",\"confianza\":0.97}\n"
+            "COPEC APP -> {\"categoria\":\"Combustible\",\"confianza\":0.95}\n"
+            "MERCADOPAGO*SEKHM -> {\"categoria\":\"Otros\",\"confianza\":0.2}\n"
+            "PARKING ALTO LAS -> {\"categoria\":\"Transporte\",\"confianza\":0.9}\n"
+            "Transferencia a 'S.PODESTA YUTR' mensaje '' -> {\"categoria\":\"Persona\",\"confianza\":0.4}")
+
+
+def llm(system, user):
+    """Llama a Ollama y devuelve dict o None. El runner MLX no soporta 'format': se valida aquí."""
+    body = {"model": MODEL, "stream": False, "think": False, "keep_alive": "30m",
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "options": {"num_ctx": NUM_CTX, "temperature": 0, "num_predict": 200}}
+    for _ in range(2):
+        try:
+            req = urllib.request.Request(OLLAMA, json.dumps(body).encode(), {"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                txt = json.load(r)["message"]["content"]
+            return json.loads(txt[txt.find("{"): txt.rfind("}") + 1])
+        except Exception:  # noqa: BLE001 - Mac dormido, JSON inválido, etc.
+            time.sleep(2)
+    return None
+
+
+def sugerir(item):
+    if item["tipo"] == "compra":
+        user = f"Compra con tarjeta de débito en el comercio: '{item['contraparte']}'"
+    elif item["tipo"] == "transferencia":
+        user = (f"Transferencia a '{item['contraparte']}' ({item.get('banco') or 's/banco'}), "
+                f"mensaje: '{item.get('mensaje') or ''}'")
+    else:
+        user = f"Cargo en cartola de cuenta corriente: '{item['contraparte']}'"
+    js = llm(llm_system(), user) or {}
+    cat, conf = js.get("categoria"), js.get("confianza")
+    if cat in CATS and isinstance(conf, (int, float)) and 0 <= conf <= 1:
+        return cat, float(conf)
+    return "Sin categoría", 0.0
+
+
+def categorizar(item, reglas, st, backfill=False):
+    """-> (categoria, fijo, preguntar, motivo)."""
+    r = reglas.get((tipo_regla(item), norm(clave(item))))
+    if r:
+        return r["cat"], r["fijo"], r["preguntar"], "regla"
+    if item["tipo"] == "transferencia" and es_propio(item):
+        return "Traspaso propio", False, False, "propio"
+    fija = regla_fija(f"{item['contraparte']} {item.get('mensaje') or ''}")
+    if fija and not re.search(PASARELAS, norm(item["contraparte"])) or fija == "Pago tarjeta":
+        return fija, False, False, "fija"
+    cat, conf = sugerir(item)
+    preguntar = (conf < UMBRAL or (st.aprendiendo and not backfill) or item["tipo"] == "transferencia"
+                 or bool(re.search(PASARELAS, norm(item["contraparte"]))))
+    return cat, False, preguntar, f"modelo {conf:.2f}"
+
+
+def pregunta(gid, item, cat):
+    ops = [cat] + [c for c in RELACIONADAS.get(cat, ["Otros", "Compras"]) if c != cat][:2]
+    if cat == "Sin categoría":
+        ops = ["Restaurantes", "Compras", "Supermercado"]
+    hora = f" {item['hora']}" if item.get("hora") else ""
+    if item["tipo"] == "transferencia":
+        head = (f"🤔 {gid}: transferiste {clp(item['monto'])} a {item['contraparte']} "
+                f"({item.get('banco') or ''} ****{item.get('cuenta4') or ''}){hora}")
+        if item.get("mensaje") and item["mensaje"].lower() != "sin mensaje":
+            head += f'\nMensaje: "{item["mensaje"]}"'
+    elif item["tipo"] == "compra":
+        head = f"🤔 {gid}: {clp(item['monto'])} en {item['contraparte']} ({item['fecha']}{hora})"
+    else:
+        head = f"🤔 {gid}: cargo {clp(item['monto'])} '{item['contraparte']}' ({item['fecha']})"
+    opts = "  ".join(f"{i}) {c}" for i, c in enumerate(ops, 1))
+    return head + f"\n{opts}\nResponde el número, otra categoría, o agrega \"fijo\" si es mensual.", ops
+
+
+# --- sync de correos -------------------------------------------------------------
+
+def search(q, dias, maximo=200):
+    ids, page = [], None
+    while len(ids) < maximo:
+        args = ["gmail", "messages", "search", f"{q} newer_than:{dias}d", "--max", "100"]
+        if page:
+            args += ["--page", page]
+        r = gog(*args)
+        ids += [m["id"] for m in r.get("messages") or []]
+        page = r.get("nextPageToken")
+        if not page:
+            break
+    return ids
+
+
+def raw(mid):
+    r = gog("gmail", "raw", mid, "--format", "raw")
+    return base64.urlsafe_b64decode(r["raw"] + "=" * (-len(r["raw"]) % 4))
+
+
+def fila(gid, item, cat, fijo, estado, fuente, origen):
+    tipo = {"compra": "Compra débito", "transferencia": "Transferencia"}.get(item["tipo"], item["tipo"])
+    detalle = item.get("mensaje") or item.get("operacion") or ""
+    if item.get("programada"):
+        detalle = (detalle + " (programada)").strip()
+    cuenta = item.get("tarjeta") or item.get("cuenta4") or ""
+    monto = item["monto"]
+    if item.get("moneda", "CLP") != "CLP":
+        # Monto es CLP: lo extranjero va al detalle; el cargo en pesos lo trae la cartola.
+        detalle = f"{item['moneda']} {item['monto']} · {detalle}".strip(" ·")
+        monto, estado = "", "revisar"
+    return [gid, item["fecha"], item.get("hora") or "", monto, tipo, item["contraparte"], cat,
+            "sí" if fijo else "", detalle, f"****{cuenta}" if cuenta else "", estado, fuente, "", origen, now()]
+
+
+def cmd_sync(args):
+    st, sh = State(), Sheet()
+    dias = args.dias or (90 if args.backfill else 3)
+    vistos = {r[13] for r in sh.gastos()[1:] if len(r) > 13 and r[13]}
+    ign = set(st.d["ignorados"])
+    reglas = sh.reglas()
+    nxt = sh.ids()
+    msgs, rows, cache, nuevos = [], [], {}, 0
+    pend_clave = {norm(p["clave"]): g for g, p in st.d["pendientes"].items()}
+    for mid in reversed(search(SENDERS, dias, maximo=5000 if args.backfill else 200)):  # más antiguos primero
+        if mid in ign or mid in vistos:
+            continue
+        p = gp.parse(raw(mid))
+        if p["tipo"] in ("ignorar", "copia_destinatario"):
+            ign.add(mid)
+            continue
+        if p["tipo"] == "desconocido":
+            ign.add(mid)
+            msgs.append(f"⚠️ No reconocí un correo de BCI: \"{p['subject']}\" ({p['from']}). Revisa si es un gasto.")
+            continue
+        origen = p.get("comprobante") or mid
+        if origen in vistos:
+            continue
+        vistos.add(origen)
+        gid = nxt("T" if p["tipo"] == "transferencia" else "G")
+        k = (tipo_regla(p), norm(clave(p)))
+        if k not in cache:
+            cache[k] = categorizar(p, reglas, st, backfill=args.backfill)
+        cat, fijo, preguntar, motivo = cache[k]
+        if preguntar and args.backfill and p["monto"] < BACKFILL_MIN and norm(clave(p)) not in pend_clave:
+            rows.append(fila(gid, p, cat, fijo, "revisar", "correo", origen))
+            nuevos += 1
+            continue
+        rows.append(fila(gid, p, cat, fijo, "pendiente" if preguntar else "auto", "correo", origen))
+        nuevos += 1
+        if preguntar:
+            ya = pend_clave.get(norm(clave(p)))
+            if ya:  # misma contraparte ya preguntada: se resolverá junto con esa respuesta
+                st.d["pendientes"][ya].setdefault("tambien", []).append(gid)
+                continue
+            txt, ops = pregunta(gid, p, cat)
+            st.d["pendientes"][gid] = {"opciones": ops, "sugerida": cat, "contraparte": p["contraparte"],
+                                       "tipo": tipo_regla(p), "clave": clave(p), "preguntado": now(),
+                                       "monto": p["monto"], "fecha": p["fecha"], "tambien": []}
+            pend_clave[norm(clave(p))] = gid
+            if not args.backfill:
+                st.d["ultima_pregunta"] = gid
+                msgs.append(txt)
+        elif not args.backfill and motivo.startswith("modelo"):
+            msgs.append(f"✓ {gid}: {clp(p['monto'])} {p['contraparte']} → {cat}")
+    for i in range(0, len(rows), 100):
+        sh.append("Gastos", rows[i:i + 100])
+    if rows:
+        formatos("Gastos")
+    st.d["ignorados"] = sorted(ign)[-2000:]
+    st.save()
+    if args.backfill:
+        rev = sum(1 for r in rows if r[10] == "revisar")
+        msgs.append(f"📥 Backfill {dias} días: {nuevos} movimientos registrados. "
+                    f"{len(st.d['pendientes'])} contrapartes por confirmar (≥ {clp(BACKFILL_MIN)}): escribe \"pendientes\". "
+                    f"{rev} de menor monto quedaron como \"revisar\" en la planilla.")
+    print("\n\n".join(msgs) if msgs else "NO_REPLY")
+
+
+# --- respuestas del usuario --------------------------------------------------------
+
+SINONIMOS = {"super": "Supermercado", "comida": "Restaurantes", "restaurant": "Restaurantes", "delivery": "Restaurantes",
+             "bencina": "Combustible", "farmacia": "Salud", "medico": "Salud", "doctor": "Salud", "dentista": "Salud",
+             "luz": "Servicios básicos", "agua": "Servicios básicos", "gas": "Servicios básicos",
+             "gastos comunes": "Servicios básicos", "arriendo": "Hogar", "uber": "Transporte",
+             "estacionamiento": "Transporte", "auto": "Transporte", "celular": "Telefonía/Internet",
+             "internet": "Telefonía/Internet", "gimnasio": "Cuidado personal", "masaje": "Cuidado personal",
+             "peluqueria": "Cuidado personal", "prestamo": "Préstamo", "me devolveran": "Préstamo",
+             "propio": "Traspaso propio", "mia": "Traspaso propio", "ahorro": "Traspaso propio",
+             "ropa": "Compras", "regalo": "Compras", "curso": "Educación", "colegio": "Educación",
+             "seguro": "Seguros", "cine": "Entretención", "viaje": "Entretención", "carrete": "Entretención",
+             "vete": "Mascotas", "veterinaria": "Mascotas", "veterinario": "Mascotas", "mascota": "Mascotas",
+             "perro": "Mascotas", "gato": "Mascotas", "bencinera": "Combustible", "taxi": "Transporte",
+             "almuerzo": "Restaurantes", "cena": "Restaurantes", "cafe": "Restaurantes", "bar": "Restaurantes",
+             "spa": "Cuidado personal", "clinica": "Salud", "examen": "Salud", "isapre": "Salud",
+             "netflix": "Suscripciones", "spotify": "Suscripciones", "app": "Suscripciones"}
+
+
+def interpretar(texto, opciones):
+    """Texto libre -> categoría (o None)."""
+    t = norm(texto).lower()
+    m = re.search(r"\b([1-9])\b", t)
+    if m and opciones and int(m.group(1)) <= len(opciones):
+        return opciones[int(m.group(1)) - 1]
+    if re.fullmatch(r"(ok|si|sí|correcto|dale|bien)\b.*", t) and opciones:
+        return opciones[0]
+    for c in sorted(ALL_CATS, key=len, reverse=True):
+        if c != "Sin categoría" and norm(c).lower() in t:
+            return c
+    for k, c in SINONIMOS.items():
+        if re.search(rf"\b{k}\b", t):
+            return c
+    desc = "\n".join(f"- {k}: {v}" for k, v in CATS.items()) + "\n- Préstamo: plata que me van a devolver"
+    js = llm("El usuario responde qué tipo de gasto fue un movimiento bancario. Mapea su respuesta a UNA categoría:\n"
+             + desc + "\nResponde SOLO JSON {\"categoria\": \"<de la lista>\", \"confianza\": <0..1>}. "
+             "Si la respuesta no describe un tipo de gasto, {\"categoria\": null, \"confianza\": 0}.", texto)
+    c, conf = (js or {}).get("categoria"), (js or {}).get("confianza") or 0
+    return c if c in ALL_CATS and c != "Sin categoría" and conf >= 0.7 else None
+
+
+def aplicar(sh, st, gid, cat, fijo, quien="usuario"):
+    row, r = sh.find(gid)
+    if not row:
+        return f"No encontré {gid} en la planilla."
+    p = st.d["pendientes"].pop(gid, None) or {}
+    r = r + [""] * (len(GASTOS_COLS) - len(r))
+    for g in [gid] + p.get("tambien", []):
+        rw, rr = sh.find(g)
+        if rw:
+            rr = rr + [""] * (len(GASTOS_COLS) - len(rr))
+            sh.update(f"Gastos!G{rw}:H{rw}", [[cat, "sí" if fijo else rr[7]]])
+            sh.update(f"Gastos!K{rw}", [["confirmado"]])
+    tipo = p.get("tipo") or {"T": "Transferencia", "C": "Cartola"}.get(gid[0], "Compra")
+    cl = p.get("clave") or r[5]
+    msg = f"✓ {gid} → {cat}" + (" (fijo)" if fijo else "")
+    if p.get("tambien"):
+        msg += f" (y {len(p['tambien'])} movimientos más de {p['contraparte']})"
+    if cl and not re.search(GENERICOS, norm(cl)):
+        sh.set_regla(tipo, cl, cat, fijo, quien)
+        msg += f". Regla guardada para \"{cl.split('|')[0]}\"."
+    if st.d.get("ultima_pregunta") == gid:
+        st.d["ultima_pregunta"] = None
+    st.save()
+    return msg
+
+
+def cmd_responder(args):
+    st, sh = State(), Sheet()
+    texto = " ".join(args.texto)
+    m = re.search(r"\b([GTC]\d{1,5})\b", texto.upper())
+    gid = m.group(1) if m else (st.d.get("ultima_pregunta") or next(iter(st.d["pendientes"]), None))
+    if not gid:
+        print("No tengo preguntas de gastos pendientes.")
+        return
+    p = st.d["pendientes"].get(gid, {})
+    cat = interpretar(re.sub(r"\b[GTC]\d{1,5}\b", "", texto, flags=re.I), p.get("opciones"))
+    if not cat:
+        print(f"No entendí la categoría para {gid}. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría"))
+        return
+    fijo = bool(re.search(r"\bfijo\b", norm(texto).lower()))
+    out = aplicar(sh, st, gid, cat, fijo)
+    resto = [g for g in st.d["pendientes"] if g != gid]
+    if resto:
+        out += f"\nQuedan {len(resto)} pendientes" + (f"; siguiente: {resto[0]}" if len(resto) else "")
+    print(out)
+
+
+def cmd_corregir(args):
+    st, sh = State(), Sheet()
+    cat = interpretar(" ".join(args.texto), None)
+    if not cat:
+        print("No entendí la categoría. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría"))
+        return
+    print(aplicar(sh, st, args.id.upper(), cat, bool(re.search(r"\bfijo\b", " ".join(args.texto).lower()))))
+
+
+def cmd_pendientes(args):
+    st = State()
+    pend = list(st.d["pendientes"].items())
+    if not pend:
+        print("NO_REPLY" if args.recordatorio else "No hay gastos pendientes de confirmar. ✨")
+        return
+    lines = [f"📋 {len(pend)} gastos por confirmar" + (" (resumen del día)" if args.recordatorio else "") + ":"]
+    for gid, p in pend[:10]:
+        ops = " ".join(f"{i}) {o}" for i, o in enumerate(p.get("opciones") or [p["sugerida"]], 1))
+        mas = f" (+{len(p['tambien'])} más)" if p.get("tambien") else ""
+        lines.append(f"{gid}: {clp(p.get('monto', 0))} {p['contraparte']} ({p.get('fecha', '')}){mas}\n   {ops}")
+    if len(pend) > 10:
+        lines.append(f"…y {len(pend) - 10} más.")
+    lines.append("Responde por ejemplo \"G12 1\", \"T3 arriendo fijo\" o \"G15 farmacia\" (una por mensaje).")
+    st.d["ultima_pregunta"] = pend[0][0]
+    st.save()
+    print("\n".join(lines))
+
+
+# --- cartola -----------------------------------------------------------------------
+
+def _fecha(s):
+    """DD/MM/AAAA o número de serie de Sheets (si la celda perdió el formato de fecha)."""
+    s = str(s).strip()
+    if re.fullmatch(r"\d{5}([.,]\d+)?", s):
+        return dt.date(1899, 12, 30) + dt.timedelta(days=int(re.split(r"[.,]", s)[0]))
+    return dt.datetime.strptime(s, "%d/%m/%Y").date()
+
+
+def _limpia(desc):
+    d = re.sub(r"^AUT\s+", "", desc)
+    return re.sub(r"\s+\d{3,}$", "", d).strip()
+
+
+def regla_compra(reglas, nombre):
+    """El correo trunca el comercio a 16 caracteres y la cartola a ~19: comparar por prefijo."""
+    k = norm(nombre)[:16]
+    for (tipo, cl), r in reglas.items():
+        if tipo == "Compra" and len(cl) >= 8 and (k.startswith(cl[:16]) or cl.startswith(k)):
+            return r
+    return None
+
+
+def cmd_cartola(args):
+    st, sh = State(), Sheet()
+    pwd = secret("BCI_PDF_PASSWORD")
+    out = []
+    for mid in reversed(search(CARTOLA_Q, args.dias or 45, maximo=12)):
+        if mid in st.d["cartolas"]:
+            continue
+        pdf = gp.cartola_pdf(raw(mid))
+        if not pdf:
+            continue
+        alertadas = st.d.setdefault("cartolas_alertadas", [])
+        try:
+            c = gp.parse_cartola(pdf, pwd)
+            problema = None if c["cuadra"] else (
+                f"no cuadra con su resumen (cargos {clp(c['cargos'])} vs {clp(c['resumen_cargos'] or 0)})")
+        except ValueError as e:
+            c, problema = None, str(e)
+        if problema:
+            # No se marca como procesada: se reintenta cada día (p.ej. después de arreglar el parser),
+            # pero se avisa una sola vez.
+            if mid not in alertadas:
+                alertadas.append(mid)
+                st.save()
+                out.append(f"⚠️ Cartola: {problema}. No registré nada; hay que revisar el parser.")
+            continue
+        desde, hasta = c["periodo"]
+        d0, d1 = _fecha(desde.replace("-", "/")), _fecha(hasta.replace("-", "/"))
+        # filas de correo dentro del período, por conciliar
+        filas = []
+        for i, r in enumerate(sh.gastos()[1:], start=2):
+            r = r + [""] * (len(GASTOS_COLS) - len(r))
+            try:
+                f = _fecha(r[1])
+            except ValueError:
+                continue
+            # ±3 días en ambos bordes: el banco contabiliza la compra uno o más días después
+            if r[11] == "correo" and not r[12] and d0 - dt.timedelta(days=3) <= f <= d1 + dt.timedelta(days=3):
+                filas.append({"row": i, "fecha": f, "monto": num(r[3]),
+                              "tipo": r[4], "usada": False})
+        reglas = sh.reglas()
+        nuevas, conciliadas, gasto, ingreso, internos = [], set(), 0, 0, 0
+        for mv in c["movimientos"]:
+            desc = mv["descripcion"]
+            if re.search(INTERNOS, desc):
+                internos += 1
+                continue
+            f = _fecha(mv["fecha"])
+            if mv["tipo"] == "cargo":
+                es_trf = bool(re.match(r"TRANSFER A|TRASPASO DE FONDOS A TERCERO", desc))
+                cand = [x for x in filas if not x["usada"] and x["monto"] == mv["monto"]
+                        and abs((x["fecha"] - f).days) <= 3
+                        and (x["tipo"] == "Transferencia") == es_trf]
+                if cand:
+                    best = min(cand, key=lambda x: abs((x["fecha"] - f).days))
+                    best["usada"] = True
+                    conciliadas.add(best["row"])
+                    continue
+            item = {"tipo": "cartola", "contraparte": _limpia(desc), "monto": mv["monto"], "fecha": mv["fecha"]}
+            if mv["tipo"] == "abono":
+                cat, preguntar = ("Traspaso propio" if es_propio({"contraparte": desc}) else "Ingreso"), False
+            elif re.match(r"TRANSFER A ", desc) and es_propio({"contraparte": desc[11:]}):
+                cat, preguntar = "Traspaso propio", False
+            else:
+                r = reglas.get(("Cartola", norm(item["contraparte"]))) or regla_compra(reglas, item["contraparte"])
+                if re.search(GENERICOS, norm(item["contraparte"])):
+                    cat, preguntar = "Sin categoría", True
+                elif r:
+                    cat, preguntar = r["cat"], r["preguntar"]
+                else:
+                    cat = regla_fija(desc) or sugerir(item)[0]
+                    preguntar = not regla_fija(desc)
+            nuevas.append((item, mv, cat, preguntar))
+        filas_out, n_preg, nxt = [], 0, sh.ids()
+        pend_clave = {p["clave"]: g for g, p in st.d["pendientes"].items()}
+        for item, mv, cat, preguntar in nuevas:
+            gid = nxt("C")
+            tipo = "Ingreso" if mv["tipo"] == "abono" else "Cargo cartola"
+            generico = bool(re.search(GENERICOS, norm(item["contraparte"])))
+            estado = "pendiente" if preguntar else "auto"
+            if preguntar and args.backfill and mv["monto"] < BACKFILL_MIN:
+                estado = "revisar"
+            filas_out.append([gid, mv["fecha"], "", mv["monto"], tipo, item["contraparte"], cat, "", mv["descripcion"],
+                              "", estado, "cartola", "✅", f"cartola:{desde}", now()])
+            if estado == "pendiente":
+                ya = pend_clave.get(item["contraparte"]) if not generico else None
+                if ya:
+                    st.d["pendientes"][ya].setdefault("tambien", []).append(gid)
+                    continue
+                pend_clave[item["contraparte"]] = gid
+                n_preg += 1
+                st.d["pendientes"][gid] = {"opciones": [cat] + RELACIONADAS.get(cat, ["Otros", "Compras"])[:2],
+                                           "sugerida": cat, "contraparte": item["contraparte"], "tipo": "Cartola",
+                                           "clave": item["contraparte"], "preguntado": now(),
+                                           "monto": mv["monto"], "fecha": mv["fecha"], "tambien": []}
+            if mv["tipo"] == "abono":
+                ingreso += mv["monto"] if cat == "Ingreso" else 0
+        sh.append("Gastos", filas_out)
+        for row in conciliadas:
+            sh.update(f"Gastos!M{row}", [["✅"]])
+        # lo de los últimos 3 días del período puede contabilizarse en la cartola siguiente
+        sin = [x["row"] for x in filas if not x["usada"] and x["fecha"] <= d1 - dt.timedelta(days=3)]
+        for row in sin:
+            sh.update(f"Gastos!M{row}", [["⚠️ no está en cartola"]])
+        # gasto real del período: filas de la planilla (correo + cartola) que no son NO_GASTO
+        sh._gastos = None
+        for r in sh.gastos()[1:]:
+            r = r + [""] * (len(GASTOS_COLS) - len(r))
+            try:
+                f = _fecha(r[1])
+            except ValueError:
+                continue
+            if d0 <= f <= d1 and r[4] != "Ingreso" and r[6] not in NO_GASTO:
+                gasto += num(r[3])
+        formatos("Gastos", "Cartolas")
+        sh.append("Cartolas", [[desde.replace("-", "/"), hasta.replace("-", "/"), c["cargos"], c["abonos"],
+                                "sí", len(c["movimientos"]), len(nuevas), now()]])
+        st.d["cartolas"].append(mid)
+        st.save()
+        out.append(f"📊 Cartola {desde} → {hasta}: cuadra ✅\n"
+                   f"Gasto real: {clp(gasto)} · Ingresos: {clp(ingreso)}\n"
+                   f"{len(conciliadas)} conciliados · {len(nuevas)} agregados sin aviso · "
+                   f"{len(sin)} sin cartola · {internos} internos (línea de sobregiro)"
+                   + (f"\n{n_preg} por confirmar: escribe \"pendientes\"." if n_preg else ""))
+    print("\n\n".join(out) if out else "NO_REPLY")
+
+
+def main():
+    import argparse
+    ap = argparse.ArgumentParser(prog="gastos")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("init")
+    s = sub.add_parser("sync")
+    s.add_argument("--dias", type=int)
+    s.add_argument("--backfill", action="store_true")
+    c = sub.add_parser("cartola")
+    c.add_argument("--dias", type=int)
+    c.add_argument("--backfill", action="store_true")
+    r = sub.add_parser("responder")
+    r.add_argument("texto", nargs="+")
+    k = sub.add_parser("corregir")
+    k.add_argument("id")
+    k.add_argument("texto", nargs="+")
+    p = sub.add_parser("pendientes")
+    p.add_argument("--recordatorio", action="store_true")
+    a = ap.parse_args()
+    if not SHEET or not ACCOUNT:
+        sys.exit("Faltan GASTOS_SHEET_ID / GASTOS_ACCOUNT")
+    # Un comando a la vez: el cron (sync cada 2 min) y las respuestas del agente leen y
+    # escriben state.json; sin lock uno pisa los cambios del otro.
+    os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+    lock = open(os.path.join(STATE_DIR, ".lock"), "w")
+    deadline = time.time() + 240
+    while True:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except BlockingIOError:
+            if time.time() > deadline:
+                sys.exit("gastos: otro proceso sigue corriendo (lock ocupado)")
+            time.sleep(1)
+    {"init": cmd_init, "sync": cmd_sync, "cartola": cmd_cartola, "responder": cmd_responder,
+     "corregir": cmd_corregir, "pendientes": cmd_pendientes}[a.cmd](a)
+
+
+if __name__ == "__main__":
+    main()

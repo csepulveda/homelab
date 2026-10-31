@@ -33,6 +33,30 @@ managedConfigPaths:
   - agents.defaults.model
   - gateway.trustedProxies
   - gateway.controlUi.allowedOrigins
+  - tools.exec
+  - tools.fs
+  - cron.enabled
+
+# Registro de gastos BCI (Gmail -> Google Sheets) con gog + modelo local.
+# Datos personales fuera de git, en el Secret existingSecret:
+#   GOG_KEYRING_PASSWORD  clave del keyring de gog (token OAuth en el PVC, ~/.openclaw/gog)
+#   BCI_PDF_PASSWORD      clave de los PDF de cartola
+#   GASTOS_ACCOUNT        cuenta Gmail
+#   GASTOS_SHEET_ID       ID de la planilla
+#   GASTOS_OWN_NAMES      nombres propios separados por coma (traspasos a cuentas propias)
+# Los crons se crean una vez con el CLI (quedan en el PVC); ver files/gastos/README.md.
+gastos:
+  enabled: true
+  # pregunta por WhatsApp si la confianza del modelo es menor a esto (benchmark 2026-10-31)
+  umbral: "0.9"
+  aprendizajeDias: "14"
+  backfillMin: "50000"
+  gog:
+    url: https://github.com/steipete/gogcli/releases/download/v0.47.1/gogcli_0.47.1_linux_amd64.tar.gz
+    sha256: 279bc3a03c1919d774e268ef229949f45b753a0e21257f9fb315b05be7a40ea9
+  pypdf:
+    url: https://files.pythonhosted.org/packages/3f/4b/77e8ad4ac42c9d93600f40541a50e9feb3a61d2bbee2d76f659346072051/pypdf-6.21.4-py3-none-any.whl
+    sha256: 33e4fb41ca352810eb4e9838aa0d82d6888a5f8bf682f43e99cce5faa666255c
 
 ingress:
   host: openclaw.csepulveda.net

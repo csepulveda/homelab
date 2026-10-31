@@ -56,7 +56,11 @@ data:
           "model": { "primary": {{ printf "ollama/%s" .Values.ollama.primaryModel | quote }} }
         }
       },
-      "cron": { "enabled": false }
+      "tools": {
+        "exec": { "mode": "allowlist" },
+        "fs": { "workspaceOnly": true }
+      },
+      "cron": { "enabled": true }
     }
   sync-config.js: |
     const fs = require("fs");
