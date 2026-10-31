@@ -60,23 +60,28 @@ data:
     }
   sync-config.js: |
     const fs = require("fs");
+    // openclaw.json es JSON5 (comentarios, comas finales); usar el parser que trae la imagen.
+    const JSON5 = require("/app/node_modules/json5");
     const src = "/config/openclaw.json";
     const dst = "/home/node/.openclaw/openclaw.json";
     const paths = {{ .Values.managedConfigPaths | toJson }};
+    // OpenClaw ya rota openclaw.json.bak{,.1..4}; usar un nombre propio para no pisarlos.
+    const backup = dst + ".sync-bak";
 
     if (!fs.existsSync(dst)) {
       fs.copyFileSync(src, dst);
+      fs.chmodSync(dst, 0o600);
       console.log("seed: openclaw.json copiado desde el ConfigMap");
       process.exit(0);
     }
 
-    const desired = JSON.parse(fs.readFileSync(src, "utf8"));
+    const desired = JSON5.parse(fs.readFileSync(src, "utf8"));
     let current;
     try {
-      current = JSON.parse(fs.readFileSync(dst, "utf8"));
+      current = JSON5.parse(fs.readFileSync(dst, "utf8"));
     } catch (e) {
       // No romper el arranque por un archivo que no se puede parsear; se deja intacto.
-      console.error("sync omitido: openclaw.json del PVC no es JSON valido:", e.message);
+      console.error("sync omitido: openclaw.json del PVC no es JSON5 valido:", e.message);
       process.exit(0);
     }
 
@@ -99,10 +104,13 @@ data:
       console.log("sync: sin cambios");
       process.exit(0);
     }
-    fs.copyFileSync(dst, dst + ".bak");
-    fs.writeFileSync(dst + ".tmp", JSON.stringify(current, null, 2) + "\n");
-    fs.renameSync(dst + ".tmp", dst);
-    console.log("sync: actualizado " + changed.join(", ") + " (respaldo en openclaw.json.bak)");
+    fs.copyFileSync(dst, backup);
+    fs.chmodSync(backup, 0o600);
+    const tmp = dst + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(current, null, 2) + "\n", { mode: 0o600 });
+    fs.chmodSync(tmp, 0o600); // por si quedo un .tmp viejo con otros permisos
+    fs.renameSync(tmp, dst);
+    console.log("sync: actualizado " + changed.join(", ") + " (respaldo en openclaw.json.sync-bak)");
   AGENTS.md: |
     # Asistente homelab
 
