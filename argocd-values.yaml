@@ -1,15 +1,21 @@
 server:
   ingress:
     enabled: true
+    # Privado: clase nginx (LB 192.168.100.210, no expuesto por el DMZ) y sin
+    # external-dns target, asi external-dns publica la IP privada. El webhook de
+    # GitHub se elimino; ArgoCD sincroniza por polling (timeout.reconciliation).
     annotations:
-      external-dns.kubernetes.io/target: router.csepulveda.net
       cert-manager.io/cluster-issuer: letsencrypt
-    ingressClassName: cilium
+      nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.100.0/24
+    ingressClassName: nginx
     hostname: argocd.csepulveda.net
     tls: true
 configs:
   params:
     server.insecure: true
+  cm:
+    url: https://argocd.csepulveda.net
+    timeout.reconciliation: 120s
 global:
   logging:
     level: warn
