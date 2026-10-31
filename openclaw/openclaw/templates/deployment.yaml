@@ -24,6 +24,37 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
+        # El instalador de plugins rechaza un /tmp 2777 sin sticky bit (asi lo
+        # deja el emptyDir con fsGroup) y avisa si el state dir es de root.
+        - name: fix-perms
+          image: busybox:1.38
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - chmod 1777 /tmp && chown 1000:1000 /home/node/.openclaw
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 32Mi
+              cpu: 50m
+          volumeMounts:
+            - name: openclaw-home
+              mountPath: /home/node/.openclaw
+            - name: tmp
+              mountPath: /tmp
         - name: init-config
           image: busybox:1.38
           imagePullPolicy: IfNotPresent
@@ -72,6 +103,9 @@ spec:
               value: /home/node/.openclaw/.cache
             - name: NODE_ENV
               value: production
+            # rootfs read-only: npm (instalacion de plugins) usa cache en el PVC
+            - name: npm_config_cache
+              value: /home/node/.openclaw/.cache/npm
             - name: TZ
               value: America/Santiago
             - name: OPENCLAW_GATEWAY_TOKEN
