@@ -11,7 +11,7 @@ data:
     {{- $policy := dict "security" "allowlist" "ask" "off" "askFallback" "deny" "autoAllowSkills" false }}
     {{- $agents := dict "main" (merge (dict "allowlist" list) (deepCopy $policy)) }}
     {{- if .Values.gastos.enabled }}
-    {{- $gastos := list (dict "pattern" "/opt/gastos/gastos" "argPattern" "^responder .{1,300}$") }}
+    {{- $gastos := list (dict "pattern" "/opt/gastos-tools/gastos" "argPattern" "^responder .{1,300}$") }}
     {{- $_ := set $agents "gastos" (merge (dict "allowlist" $gastos) (deepCopy $policy)) }}
     {{- end }}
     {{ dict "version" 1 "defaults" $policy "agents" $agents | toJson }}

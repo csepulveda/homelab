@@ -17,6 +17,12 @@ data:
   # depende de esto; los comandos de gastos fallarán hasta el próximo reinicio.
   install-tools.sh: |
     set -u
+    # El CLI va como archivo real (no el symlink ..data/ del ConfigMap): la allowlist de
+    # exec compara la ruta real del ejecutable. Primero, para que exista aunque fallen las descargas.
+    rm -f /tools/gastos /tools/gastos_parse.py
+    cp /gastos/gastos /gastos/gastos_parse.py /tools/
+    chmod 0555 /tools/gastos
+    chmod 0444 /tools/gastos_parse.py
     C=/home/node/.openclaw/.cache/gastos-tools
     mkdir -p "$C"
     fetch() {
