@@ -4,11 +4,9 @@ metadata:
   name: openclaw-config
   namespace: openclaw
 data:
-  # Solo se copia al PVC si no existe (seed-if-missing). Despues de la primera
-  # ejecucion la copia en el PVC manda; para re-sembrar borrar
-  # /home/node/.openclaw/openclaw.json y hacer rollout restart.
-  # Cambios de gateway (bind/trustedProxies/allowedOrigins) tambien se aplican al
-  # PVC con `openclaw config set` porque el seed no sobreescribe.
+  # Se copia completo al PVC solo si no existe (seed). Despues, en cada arranque,
+  # sync-config.js sobreescribe unicamente .Values.managedConfigPaths; todo lo
+  # demas del PVC (canales, plugins, dispositivos) se conserva.
   # La config de WhatsApp (numero en allowFrom) se agrega con el CLI dentro del
   # pod para no publicar el numero en este repo.
   openclaw.json: |
@@ -60,6 +58,51 @@ data:
       },
       "cron": { "enabled": false }
     }
+  sync-config.js: |
+    const fs = require("fs");
+    const src = "/config/openclaw.json";
+    const dst = "/home/node/.openclaw/openclaw.json";
+    const paths = {{ .Values.managedConfigPaths | toJson }};
+
+    if (!fs.existsSync(dst)) {
+      fs.copyFileSync(src, dst);
+      console.log("seed: openclaw.json copiado desde el ConfigMap");
+      process.exit(0);
+    }
+
+    const desired = JSON.parse(fs.readFileSync(src, "utf8"));
+    let current;
+    try {
+      current = JSON.parse(fs.readFileSync(dst, "utf8"));
+    } catch (e) {
+      // No romper el arranque por un archivo que no se puede parsear; se deja intacto.
+      console.error("sync omitido: openclaw.json del PVC no es JSON valido:", e.message);
+      process.exit(0);
+    }
+
+    const get = (o, keys) => keys.reduce((x, k) => (x == null ? undefined : x[k]), o);
+    const changed = [];
+    for (const p of paths) {
+      const keys = p.split(".");
+      const want = get(desired, keys);
+      if (want === undefined || JSON.stringify(want) === JSON.stringify(get(current, keys))) continue;
+      let node = current;
+      for (const k of keys.slice(0, -1)) {
+        if (typeof node[k] !== "object" || node[k] === null) node[k] = {};
+        node = node[k];
+      }
+      node[keys[keys.length - 1]] = want;
+      changed.push(p);
+    }
+
+    if (changed.length === 0) {
+      console.log("sync: sin cambios");
+      process.exit(0);
+    }
+    fs.copyFileSync(dst, dst + ".bak");
+    fs.writeFileSync(dst + ".tmp", JSON.stringify(current, null, 2) + "\n");
+    fs.renameSync(dst + ".tmp", dst);
+    console.log("sync: actualizado " + changed.join(", ") + " (respaldo en openclaw.json.bak)");
   AGENTS.md: |
     # Asistente homelab
 

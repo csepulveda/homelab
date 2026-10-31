@@ -25,6 +25,15 @@ ollama:
 #     --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 existingSecret: openclaw-secrets
 
+# Claves de openclaw.json que manda git. En cada arranque el initContainer
+# sync-config las copia desde el ConfigMap al openclaw.json del PVC; el resto
+# (canales/WhatsApp, plugins, dispositivos, meta) se conserva tal cual.
+managedConfigPaths:
+  - models.providers.ollama
+  - agents.defaults.model
+  - gateway.trustedProxies
+  - gateway.controlUi.allowedOrigins
+
 ingress:
   host: openclaw.csepulveda.net
   allowedSourceRanges:
