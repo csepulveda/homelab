@@ -7,16 +7,22 @@ data:
   # Solo se copia al PVC si no existe (seed-if-missing). Despues de la primera
   # ejecucion la copia en el PVC manda; para re-sembrar borrar
   # /home/node/.openclaw/openclaw.json y hacer rollout restart.
+  # Cambios de gateway (bind/trustedProxies/allowedOrigins) tambien se aplican al
+  # PVC con `openclaw config set` porque el seed no sobreescribe.
   # La config de WhatsApp (numero en allowFrom) se agrega con el CLI dentro del
   # pod para no publicar el numero en este repo.
   openclaw.json: |
     {
       "gateway": {
         "mode": "local",
-        "bind": "loopback",
+        "bind": "lan",
         "port": 18789,
         "auth": { "mode": "token" },
-        "controlUi": { "enabled": true }
+        "trustedProxies": {{ .Values.ingress.trustedProxies | toJson }},
+        "controlUi": {
+          "enabled": true,
+          "allowedOrigins": [{{ printf "https://%s" .Values.ingress.host | quote }}]
+        }
       },
       "models": {
         "providers": {
