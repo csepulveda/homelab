@@ -1,0 +1,124 @@
+# Respaldos de la base de datos de Immich (Cluster CNPG immich-pg).
+#
+# 1. Diario (fisico, Barman Cloud plugin): base backup + WAL continuo al S3 del
+#    NAS. Permite restaurar a cualquier instante dentro de la ventana de
+#    retencion (PITR). La retencion es una "recovery window": el plugin borra
+#    los backups/WAL que ya no hacen falta para cubrirla.
+# 2. Mensual (logico, pg_dumpall): CronJob que deja un .sql.gz en el PVC NFS
+#    postgres-backup-pvc (dataset del NAS que se puede incluir en el Cloud Sync
+#    semanal a Amazon S3). El plugin solo admite un ObjectStore por Cluster y
+#    una unica ventana de retencion, por eso el mensual va aparte.
+#
+# Secret fuera de git (credenciales del RustFS del NAS):
+#   kubectl -n immich create secret generic {{ .Values.pgBackup.s3SecretName }} \
+#     --from-literal=AWS_ACCESS_KEY_ID=... --from-literal=AWS_SECRET_ACCESS_KEY=...
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ .Values.pgBackup.objectStoreName }}
+  namespace: immich
+spec:
+  configuration:
+    destinationPath: s3://{{ .Values.pgBackup.bucket }}/
+    endpointURL: {{ .Values.pgBackup.endpointURL | quote }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ .Values.pgBackup.s3SecretName }}
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKey:
+        name: {{ .Values.pgBackup.s3SecretName }}
+        key: AWS_SECRET_ACCESS_KEY
+    wal:
+      compression: gzip
+      maxParallel: 2
+    data:
+      compression: gzip
+      jobs: 2
+  retentionPolicy: {{ .Values.pgBackup.dailyRetention | quote }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: immich-pg-daily
+  namespace: immich
+spec:
+  cluster:
+    name: immich-pg
+  # Formato cron de 6 campos (con segundos). Horas en UTC.
+  schedule: {{ .Values.pgBackup.dailySchedule | quote }}
+  backupOwnerReference: self
+  immediate: true
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: immich-pg-monthly-dump
+  namespace: immich
+spec:
+  schedule: {{ .Values.pgBackup.monthlySchedule | quote }}
+  timeZone: America/Santiago
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: OnFailure
+          automountServiceAccountToken: false
+          securityContext:
+            # El dataset NFS exporta con no_root_squash y los dumps previos son de root.
+            runAsUser: 0
+          containers:
+            - name: pg-dumpall
+              # Misma imagen que el Cluster: garantiza pg_dumpall de la misma major (14).
+              image: ghcr.io/tensorchord/cloudnative-vectorchord:14-0.3.0
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  mkdir -p /backups
+                  out=/backups/immich-monthly-$(date +%Y-%m).sql.gz
+                  pg_dumpall --clean --if-exists | gzip > "$out.tmp"
+                  mv "$out.tmp" "$out"
+                  ls -la "$out"
+                  # Conserva los ultimos N mensuales
+                  ls -1t /backups/immich-monthly-*.sql.gz | tail -n +{{ add .Values.pgBackup.monthlyKeep 1 }} | xargs -r rm -f
+                  ls -1 /backups/immich-monthly-*.sql.gz
+              env:
+                - name: PGHOST
+                  value: immich-pg-rw
+                - name: PGPORT
+                  value: "5432"
+                - name: PGDATABASE
+                  value: postgres
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-pg-app
+                      key: username
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-pg-app
+                      key: password
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc

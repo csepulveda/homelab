@@ -87,3 +87,19 @@ immich:
 
   valkey:
     enabled: true
+
+# Respaldos de la DB (ver templates/postgres-backup.yaml)
+pgBackup:
+  objectStoreName: immich-pg-s3
+  # RustFS (app de TrueNAS), mismo S3 que usa Loki
+  endpointURL: http://192.168.100.155:30292
+  bucket: cnpg-immich
+  # Secret creado fuera de git con AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+  s3SecretName: immich-pg-s3
+  # Ventana de recuperacion (PITR) de los backups diarios: d/w/m
+  dailyRetention: 7d
+  # 05:00 UTC = 02:00 Chile (verano) / 01:00 (invierno). 6 campos: seg min hora dia mes dow
+  dailySchedule: "0 0 5 * * *"
+  # Dump logico el dia 1 de cada mes a las 03:00 America/Santiago (5 campos)
+  monthlySchedule: "0 3 1 * *"
+  monthlyKeep: 12

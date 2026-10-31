@@ -1,0 +1,12 @@
+apiVersion: v2
+name: plugin-barman-cloud
+description: CNPG-I Barman Cloud plugin (backups y WAL a S3 para CloudNativePG)
+type: application
+version: 0.1.0
+appVersion: v0.15.1
+
+dependencies:
+- name: plugin-barman-cloud
+  version: 0.8.1
+  repository: "https://cloudnative-pg.github.io/charts"
+  alias: plugin-barman-cloud

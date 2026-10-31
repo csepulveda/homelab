@@ -1,0 +1,9 @@
+# Debe vivir en el mismo namespace que el operador (cloudnative-pg).
+# Usa cert-manager (Issuer self-signed propio) para el mTLS operador <-> plugin.
+plugin-barman-cloud:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
