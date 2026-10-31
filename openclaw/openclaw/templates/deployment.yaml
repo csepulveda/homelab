@@ -126,9 +126,16 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: IfNotPresent
           command: ["node", "/app/dist/index.js", "approvals", "set", "--file", "/exec/exec-approvals.json"]
+          # rootfs read-only: el CLI necesita un directorio temporal privado (~/.cache/openclaw-<uid>)
           env:
             - name: HOME
               value: /home/node
+            - name: OPENCLAW_CONFIG_DIR
+              value: /home/node/.openclaw
+            - name: XDG_CACHE_HOME
+              value: /home/node/.openclaw/.cache
+            - name: TMPDIR
+              value: /tmp
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
