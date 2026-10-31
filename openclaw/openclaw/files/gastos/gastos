@@ -761,6 +761,37 @@ def cmd_categoria(args):
     print(f"✓ Categoría \"{args.nombre}\"" + (" (no suma al gasto)" if args.no_suma else ""))
 
 
+def cmd_export(_args):
+    """JSON con toda la planilla, para el análisis mensual (lo consume un job fuera del cluster)."""
+    st, sh = State(), Sheet()
+
+    def iso(v):
+        try:
+            return _fecha(v).isoformat()
+        except ValueError:
+            return None
+
+    movs = []
+    for r in sh.gastos()[1:]:
+        r = r + [""] * (len(GASTOS_COLS) - len(r))
+        if not r[0]:
+            continue
+        movs.append({"id": r[0], "fecha": iso(r[1]), "hora": r[2], "monto": num(r[3]), "tipo": r[4],
+                     "contraparte": r[5], "categoria": r[6], "fijo": r[7] == "sí", "detalle": r[8],
+                     "cuenta": r[9], "estado": r[10], "fuente": r[11], "conciliado": r[12],
+                     "suma_al_gasto": r[4] != "Ingreso" and r[6] not in NO_GASTO})
+    cartolas = [dict(zip(["desde", "hasta", "cargos", "abonos", "cuadra", "movimientos", "agregados", "procesado"],
+                         r + [""] * 8)) for r in sh.rows("Cartolas", len(CARTOLAS_COLS))[1:] if r]
+    for k in ("desde", "hasta"):
+        for x in cartolas:
+            x[k] = iso(x[k])
+    print(json.dumps({"generado": now(), "moneda": "CLP",
+                      "categorias": [{"nombre": k, "descripcion": v, "suma_al_gasto": k not in NO_GASTO}
+                                     for k, v in CATS.items()],
+                      "movimientos": movs, "cartolas": cartolas,
+                      "pendientes": len(st.d["pendientes"])}, ensure_ascii=False))
+
+
 def cmd_reaplicar(_args):
     st, sh = State(), Sheet()
     print(f"✓ Reglas reaplicadas: {reaplicar(sh, st)} movimientos actualizados.")
@@ -1039,6 +1070,7 @@ def main():
     n.add_argument("descripcion")
     n.add_argument("--no-suma", action="store_true")
     sub.add_parser("reaplicar")
+    sub.add_parser("export")
     a = ap.parse_args()
     if not SHEET or not ACCOUNT:
         sys.exit("Faltan GASTOS_SHEET_ID / GASTOS_ACCOUNT")
@@ -1059,7 +1091,7 @@ def main():
         configurar_categorias(Sheet())
     {"init": cmd_init, "sync": cmd_sync, "cartola": cmd_cartola, "responder": cmd_responder,
      "corregir": cmd_corregir, "pendientes": cmd_pendientes, "regla": cmd_regla,
-     "categoria": cmd_categoria, "reaplicar": cmd_reaplicar}[a.cmd](a)
+     "categoria": cmd_categoria, "reaplicar": cmd_reaplicar, "export": cmd_export}[a.cmd](a)
 
 
 if __name__ == "__main__":
