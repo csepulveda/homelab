@@ -17,6 +17,10 @@ spec:
         app: openclaw
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/exec-approvals: {{ include (print $.Template.BasePath "/exec-approvals.yaml") . | sha256sum }}
+        {{- if .Values.gastos.enabled }}
+        checksum/gastos: {{ include (print $.Template.BasePath "/configmap-gastos.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -64,6 +68,11 @@ spec:
             - |
               mkdir -p /home/node/.openclaw/workspace
               [ -f /home/node/.openclaw/workspace/AGENTS.md ] || cp /config/AGENTS.md /home/node/.openclaw/workspace/AGENTS.md
+              {{- if .Values.gastos.enabled }}
+              # la skill la manda git: se sobreescribe en cada arranque
+              mkdir -p /home/node/.openclaw/workspace/skills/gastos
+              cp /gastos/SKILL.md /home/node/.openclaw/workspace/skills/gastos/SKILL.md
+              {{- end }}
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -80,6 +89,10 @@ spec:
               mountPath: /home/node/.openclaw
             - name: config
               mountPath: /config
+            {{- if .Values.gastos.enabled }}
+            - name: gastos
+              mountPath: /gastos
+            {{- end }}
         # Seed de openclaw.json si no existe; si existe, solo sincroniza
         # .Values.managedConfigPaths desde el ConfigMap (ver sync-config.js).
         - name: sync-config
@@ -107,6 +120,67 @@ spec:
             - name: config
               mountPath: /config
               readOnly: true
+        # Politica de exec del agente desde git (allowlist). Corre antes del gateway,
+        # sobre el estado local (SQLite en el PVC).
+        - name: exec-policy
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["node", "/app/dist/index.js", "approvals", "set", "--file", "/exec/exec-approvals.json"]
+          env:
+            - name: HOME
+              value: /home/node
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 50m
+            limits:
+              memory: 512Mi
+              cpu: "1"
+          volumeMounts:
+            - name: openclaw-home
+              mountPath: /home/node/.openclaw
+            - name: exec-approvals
+              mountPath: /exec
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+        {{- if .Values.gastos.enabled }}
+        - name: gastos-tools
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "/gastos/install-tools.sh"]
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+              cpu: 500m
+          volumeMounts:
+            - name: openclaw-home
+              mountPath: /home/node/.openclaw
+            - name: gastos
+              mountPath: /gastos
+              readOnly: true
+            - name: gastos-tools
+              mountPath: /tools
+        {{- end }}
       containers:
         - name: gateway
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -139,6 +213,42 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.existingSecret }}
                   key: OPENCLAW_GATEWAY_TOKEN
+            {{- if .Values.gastos.enabled }}
+            # /opt/gastos primero: la allowlist de exec solo permite /opt/gastos/gastos
+            - name: PATH
+              value: /opt/gastos:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/node/.local/bin
+            - name: PYTHONPATH
+              value: /opt/gastos-tools/pypdf.whl
+            - name: GASTOS_GOG_BIN
+              value: /opt/gastos-tools/gog
+            - name: GOG_HOME
+              value: /home/node/.openclaw/gog
+            - name: GASTOS_STATE_DIR
+              value: /home/node/.openclaw/gastos
+            - name: GASTOS_SECRETS_DIR
+              value: /run/secrets/gastos
+            - name: GASTOS_OLLAMA_URL
+              value: {{ .Values.ollama.baseUrl | quote }}
+            # mismo modelo y num_ctx que OpenClaw: otro valor obliga a Ollama a recargar
+            - name: GASTOS_MODEL
+              value: {{ .Values.ollama.primaryModel | quote }}
+            - name: GASTOS_NUM_CTX
+              value: {{ .Values.ollama.contextTokens | quote }}
+            - name: GASTOS_UMBRAL
+              value: {{ .Values.gastos.umbral | quote }}
+            - name: GASTOS_APRENDIZAJE_DIAS
+              value: {{ .Values.gastos.aprendizajeDias | quote }}
+            - name: GASTOS_BACKFILL_MIN
+              value: {{ .Values.gastos.backfillMin | quote }}
+            {{- range list "GASTOS_ACCOUNT" "GASTOS_SHEET_ID" "GASTOS_OWN_NAMES" }}
+            - name: {{ . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.existingSecret }}
+                  key: {{ . }}
+                  optional: true
+            {{- end }}
+            {{- end }}
           resources:
             requests:
               memory: 512Mi
@@ -183,6 +293,17 @@ spec:
               mountPath: /home/node/.openclaw
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.gastos.enabled }}
+            - name: gastos-bin
+              mountPath: /opt/gastos
+              readOnly: true
+            - name: gastos-tools
+              mountPath: /opt/gastos-tools
+              readOnly: true
+            - name: gastos-secrets
+              mountPath: /run/secrets/gastos
+              readOnly: true
+            {{- end }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -201,3 +322,33 @@ spec:
             name: openclaw-config
         - name: tmp
           emptyDir: {}
+        - name: exec-approvals
+          configMap:
+            name: openclaw-exec-approvals
+        {{- if .Values.gastos.enabled }}
+        - name: gastos
+          configMap:
+            name: openclaw-gastos
+        # solo el CLI y su parser, ejecutables y read-only
+        - name: gastos-bin
+          configMap:
+            name: openclaw-gastos
+            defaultMode: 0555
+            items:
+              - key: gastos
+                path: gastos
+              - key: gastos_parse.py
+                path: gastos_parse.py
+        - name: gastos-tools
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: gastos-secrets
+          secret:
+            secretName: {{ .Values.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: GOG_KEYRING_PASSWORD
+                path: GOG_KEYRING_PASSWORD
+              - key: BCI_PDF_PASSWORD
+                path: BCI_PDF_PASSWORD
+        {{- end }}

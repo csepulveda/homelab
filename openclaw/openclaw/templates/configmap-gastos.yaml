@@ -1,0 +1,34 @@
+{{- if .Values.gastos.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-gastos
+  namespace: openclaw
+data:
+  gastos: |-
+{{ .Files.Get "files/gastos/gastos" | indent 4 }}
+  gastos_parse.py: |-
+{{ .Files.Get "files/gastos/gastos_parse.py" | indent 4 }}
+  SKILL.md: |-
+{{ .Files.Get "files/gastos/SKILL.md" | indent 4 }}
+  # Descarga gog y pypdf verificando sha256; cache en el PVC, copia a un emptyDir
+  # que el gateway monta read-only (el agente no puede reemplazar los binarios).
+  install-tools.sh: |
+    set -eu
+    C=/home/node/.openclaw/.cache/gastos-tools
+    mkdir -p "$C"
+    fetch() {
+      if ! echo "$2  $C/$3" | sha256sum -c - >/dev/null 2>&1; then
+        curl -fsSL --retry 3 -o "$C/$3.tmp" "$1"
+        echo "$2  $C/$3.tmp" | sha256sum -c -
+        mv "$C/$3.tmp" "$C/$3"
+      fi
+    }
+    fetch "{{ .Values.gastos.gog.url }}" "{{ .Values.gastos.gog.sha256 }}" gog.tar.gz
+    fetch "{{ .Values.gastos.pypdf.url }}" "{{ .Values.gastos.pypdf.sha256 }}" pypdf.whl
+    tar -xzf "$C/gog.tar.gz" -C /tools ./gog
+    cp "$C/pypdf.whl" /tools/pypdf.whl
+    chmod 0555 /tools/gog
+    chmod 0444 /tools/pypdf.whl
+    echo "gastos-tools: gog y pypdf verificados"
+{{- end }}
