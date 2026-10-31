@@ -1,0 +1,8 @@
+{
+  "id": "gastos-bridge",
+  "name": "Gastos bridge",
+  "description": "Responde los mensajes de los grupos de WhatsApp de agentes 'bridge' ejecutando el CLI gastos, sin turno del modelo.",
+  "categories": ["other"],
+  "activation": { "onStartup": true },
+  "configSchema": { "type": "object", "additionalProperties": false }
+}
