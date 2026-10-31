@@ -256,12 +256,14 @@ spec:
                   optional: true
             {{- end }}
             {{- end }}
+          # En reposo usa ~1.5 GiB de RSS (heap ~0.3 GiB; el resto es nativo: SQLite, workers).
+          # Con 2 GiB, un turno de agente + otro proceso node en el contenedor provocaron OOM.
           resources:
             requests:
-              memory: 512Mi
+              memory: 1Gi
               cpu: 250m
             limits:
-              memory: 2Gi
+              memory: 3Gi
               cpu: "2"
           # /startupz no depende de la salud de los canales (WhatsApp sin vincular
           # no deja el pod en NotReady). /healthz para liveness.
