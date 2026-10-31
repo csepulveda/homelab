@@ -7,9 +7,11 @@ metadata:
   namespace: openclaw
 data:
   exec-approvals.json: |
-    {{- $allow := list }}
-    {{- if .Values.gastos.enabled }}
-    {{- $allow = append $allow (dict "pattern" "/opt/gastos/gastos" "argPattern" "^(responder .{1,300}|corregir [GTCgtc][0-9]{1,5} .{1,120}|pendientes)$") }}
-    {{- end }}
+    {{- /* main: sin exec. gastos: solo el CLI. */}}
     {{- $policy := dict "security" "allowlist" "ask" "off" "askFallback" "deny" "autoAllowSkills" false }}
-    {{ dict "version" 1 "defaults" $policy "agents" (dict "main" (merge (dict "allowlist" $allow) $policy)) | toJson }}
+    {{- $agents := dict "main" (merge (dict "allowlist" list) (deepCopy $policy)) }}
+    {{- if .Values.gastos.enabled }}
+    {{- $gastos := list (dict "pattern" "/opt/gastos/gastos" "argPattern" "^responder .{1,300}$") }}
+    {{- $_ := set $agents "gastos" (merge (dict "allowlist" $gastos) (deepCopy $policy)) }}
+    {{- end }}
+    {{ dict "version" 1 "defaults" $policy "agents" $agents | toJson }}

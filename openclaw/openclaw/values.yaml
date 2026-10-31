@@ -36,6 +36,18 @@ managedConfigPaths:
   - tools.exec
   - tools.fs
   - cron.enabled
+  - agents.ownership
+  - agents.entries
+  - agents.defaults.systemAgent
+
+# Grupos de WhatsApp = contextos, cada uno con su agente. Claw SOLO admite estos grupos:
+# sync-config reescribe channels.whatsapp.groups (allowlist estricta, sin "*") y los
+# bindings en cada arranque; cualquier otro grupo se descarta antes de llegar al modelo.
+# El ID (JID) de cada grupo va en el Secret (el repo es público). Sin grupos -> groupPolicy disabled.
+whatsappGroups:
+  - name: Control Gastos
+    agent: gastos
+    secretKey: WA_GROUP_GASTOS
 
 # Registro de gastos BCI (Gmail -> Google Sheets) con gog + modelo local.
 # Datos personales fuera de git, en el Secret existingSecret:

@@ -572,9 +572,27 @@ def aplicar(sh, st, gid, cat, fijo, quien="usuario"):
     return msg
 
 
+AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
+         "• \"pendientes\": lo que falta confirmar\n"
+         "• \"G12 1\", \"T3 arriendo fijo\", \"G15 farmacia\": responder una pregunta\n"
+         "• \"corregir G5 supermercado\": cambiar uno ya registrado")
+
+
 def cmd_responder(args):
+    texto = " ".join(args.texto).strip()
+    t = norm(texto).lower()
+    # En el grupo de gastos todo mensaje llega aquí: el CLI decide, no el modelo.
+    if re.fullmatch(r"(pendientes?|que (me )?falta.*|que hay pendiente.*|lista)", t):
+        args.recordatorio = False
+        return cmd_pendientes(args)
+    m = re.fullmatch(r"(corregir|cambiar|corrige|cambia)\s+(el\s+)?([gtc]\d{1,5})\s+(?:a\s+|por\s+|era\s+)?(.+)", t)
+    if m:
+        args.id, args.texto = m.group(3), [m.group(4)]
+        return cmd_corregir(args)
+    if re.fullmatch(r"(hola|ayuda|help|\?|menu|menú)", t):
+        print(AYUDA)
+        return
     st, sh = State(), Sheet()
-    texto = " ".join(args.texto)
     m = re.search(r"\b([GTC]\d{1,5})\b", texto.upper())
     gid = m.group(1) if m else (st.d.get("ultima_pregunta") or next(iter(st.d["pendientes"]), None))
     if not gid:
