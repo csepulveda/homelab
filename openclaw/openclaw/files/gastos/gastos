@@ -43,7 +43,7 @@ SECRETS = ENV("GASTOS_SECRETS_DIR", "/run/secrets/gastos")
 GOG = ENV("GASTOS_GOG_BIN", "gog")
 TZ = dt.timezone(dt.timedelta(hours=-3))  # solo para timestamps "Registrado"
 
-SENDERS = "from:(contacto@bci.cl OR transferencias@bci.cl)"
+SENDERS = "from:(contacto@bci.cl OR transferencias@bci.cl OR contacto@servipag.cl)"
 CARTOLA_Q = 'from:bcimail@bci.cl subject:"Cartola Cuenta Corriente" has:attachment'
 
 GASTOS_COLS = ["ID", "Fecha", "Hora", "Monto", "Tipo", "Contraparte", "Categoría", "Fijo", "Detalle",
@@ -120,7 +120,9 @@ RELACIONADAS = {
 
 # Reglas fijas: (regex sobre contraparte+mensaje normalizados, categoría). Ver benchmark.
 FIJAS = [
-    (r"\bKHIPU\b.*\bTARJETA\b|\bPAGO TARJETA\b|\bTARJETA LIDER\b", "Pago tarjeta"),
+    (r"\bKHIPU\b.*\bTARJETA\b|\bPAGO TARJETA\b|\bTARJETA LIDER\b|\bEECC\b", "Pago tarjeta"),
+    (r"\b(ENEL|CGE|CHILQUINTA|ABASTIBLE|LIPIGAS|METROGAS|GASCO|AGUAS ANDINAS|ESSBIO|ESVAL)\b", "Servicios básicos"),
+    (r"\b(AUTOPISTA|AUTOPASE|COSTANERA|VESPUCIO)\b|\bRUTA \d", "Transporte"),
     (r"\b(AHUM|AHUMADA|CRUZ VERDE|C\. ?VERDE|SALCOBRAND|DR\. ?SIMI)\b", "Salud"),
     (r"\b(COPEC APP|SHELL|PRONTO COPEC|ARAMCO|PETROBRAS|ENEX|ESTACION DE SERV)\b", "Combustible"),
     (r"\b(LIDER|JUMBO|UNIMARC|SANTA ISABEL|TOTTUS|ACUENTA|MAYORISTA 10)\b", "Supermercado"),
@@ -395,6 +397,8 @@ def sugerir(item):
     elif item["tipo"] == "transferencia":
         user = (f"Transferencia a '{item['contraparte']}' ({item.get('banco') or 's/banco'}), "
                 f"mensaje: '{item.get('mensaje') or ''}'")
+    elif item["tipo"] == "servipag":
+        user = f"Pago de cuenta(s) vía Servipag a: '{item.get('mensaje') or item['contraparte']}'"
     else:
         user = f"Cargo en cartola de cuenta corriente: '{item['contraparte']}'"
     js = llm(llm_system(), user) or {}
@@ -489,6 +493,63 @@ def fila(gid, item, cat, fijo, estado, fuente, origen):
             "sí" if fijo else "", detalle, f"****{cuenta}" if cuenta else "", estado, fuente, "", origen, now()]
 
 
+def _cerca(f1, f2, dias):
+    try:
+        return abs((_fecha(f1) - _fecha(f2)).days) <= dias
+    except ValueError:
+        return False
+
+
+def gemelo_servipag(sh, p, servipag_hoy):
+    """¿La transferencia BCI a Servipag ya está registrada por su comprobante Servipag?"""
+    for r in sh.gastos()[1:]:
+        r = r + [""] * (len(GASTOS_COLS) - len(r))
+        if "servipag:" in r[8] and num(r[3]) == p["monto"] and _cerca(r[1], p["fecha"], 1):
+            return True
+    return any(m == p["monto"] and _cerca(f, p["fecha"], 1) for m, f, _ in servipag_hoy)
+
+
+def servipag(sh, st, p, reglas, nxt, rows, servipag_hoy, args):
+    """Comprobante Servipag: enriquece la fila que ya lo representa (transferencia BCI a Servipag o
+    "PAGO CUENTAS VIA INTERNET" de la cartola) o crea un movimiento "Pago cuentas"."""
+    principal = max(p["cuentas"], key=lambda x: x["valor"])
+    empresas = list(dict.fromkeys(x["empresa"] for x in p["cuentas"]))
+    item = {"tipo": "servipag", "contraparte": principal["empresa"], "monto": p["monto"], "fecha": p["fecha"],
+            "hora": p.get("hora"), "mensaje": ", ".join(empresas)}
+    cat, fijo, preguntar, motivo = categorizar(item, reglas, st, backfill=args.backfill)
+    detalle = f"Servipag: {', '.join(empresas)}"[:180] + f" [servipag:{p['consulta']}]"
+    # 1) fila existente: transferencia a Servipag (forma "BCI Transferencia") o cartola genérica
+    for i, r in enumerate(sh.gastos()[1:], start=2):
+        r = r + [""] * (len(GASTOS_COLS) - len(r))
+        if "servipag:" in r[8] or num(r[3]) != p["monto"] or not _cerca(r[1], p["fecha"], 3):
+            continue
+        if "SERVIPAG" in norm(r[5]) or norm(r[5]) == "PAGO CUENTAS VIA INTERNET":
+            estado = "pendiente" if preguntar else ("confirmado" if r[10] == "confirmado" else "auto")
+            sh.update(f"Gastos!G{i}:I{i}", [[cat, "sí" if fijo else r[7], detalle]])
+            sh.update(f"Gastos!K{i}", [[estado]])
+            st.d["pendientes"].pop(r[0], None)
+            if preguntar:
+                st.d["pendientes"][r[0]] = {"opciones": opciones_para(cat), "sugerida": cat,
+                                             "contraparte": principal["empresa"], "tipo": "Compra",
+                                             "clave": principal["empresa"], "preguntado": now(),
+                                             "monto": p["monto"], "fecha": p["fecha"], "tambien": []}
+            servipag_hoy.append((p["monto"], p["fecha"], r[0]))
+            return None if not preguntar or args.backfill else pregunta(r[0], {**item, "tipo": "compra"}, cat)[0]
+    # 2) nuevo: pago con botón BCI (BCI no avisa)
+    gid = nxt("G")
+    rows.append([gid, p["fecha"], p.get("hora") or "", p["monto"], "Pago cuentas", principal["empresa"], cat,
+                 "sí" if fijo else "", detalle, "", "pendiente" if preguntar else "auto", "correo", "",
+                 f"servipag:{p['consulta']}", now()])
+    servipag_hoy.append((p["monto"], p["fecha"], gid))
+    if preguntar:
+        txt, ops = pregunta(gid, {**item, "tipo": "compra"}, cat)
+        st.d["pendientes"][gid] = {"opciones": ops, "sugerida": cat, "contraparte": principal["empresa"],
+                                   "tipo": "Compra", "clave": principal["empresa"], "preguntado": now(),
+                                   "monto": p["monto"], "fecha": p["fecha"], "tambien": []}
+        return None if args.backfill else txt
+    return None if args.backfill else f"✓ {gid}: {clp(p['monto'])} Servipag {principal['empresa']} → {cat}"
+
+
 def cmd_sync(args):
     st, sh = State(), Sheet()
     dias = args.dias or (90 if args.backfill else 3)
@@ -498,6 +559,8 @@ def cmd_sync(args):
     nxt = sh.ids()
     msgs, rows, cache, nuevos = [], [], {}, 0
     pend_clave = {norm(p["clave"]): g for g, p in st.d["pendientes"].items()}
+    vistos |= {m for r in sh.gastos()[1:] if len(r) > 8 for m in re.findall(r"servipag:(\S+?)\]", r[8])}
+    servipag_hoy = []  # pagos Servipag de esta corrida: (monto, fecha, fila) para no duplicar su transferencia
     for mid in reversed(search(SENDERS, dias, maximo=5000 if args.backfill else 200)):  # más antiguos primero
         if mid in ign or mid in vistos:
             continue
@@ -508,6 +571,19 @@ def cmd_sync(args):
         if p["tipo"] == "desconocido":
             ign.add(mid)
             msgs.append(f"⚠️ No reconocí un correo de BCI: \"{p['subject']}\" ({p['from']}). Revisa si es un gasto.")
+            continue
+        if p["tipo"] == "servipag":
+            if p["consulta"] in vistos:
+                continue
+            vistos.add(p["consulta"])
+            ign.add(mid)  # el comprobante no cambia: no volver a bajarlo
+            msg = servipag(sh, st, p, reglas, nxt, rows, servipag_hoy, args)
+            if msg:
+                msgs.append(msg)
+            nuevos += 1
+            continue
+        if p["tipo"] == "transferencia" and "SERVIPAG" in norm(p["contraparte"]) and gemelo_servipag(sh, p, servipag_hoy):
+            vistos.add(p.get("comprobante") or mid)  # ya registrado por su comprobante Servipag
             continue
         origen = p.get("comprobante") or mid
         if origen in vistos:
