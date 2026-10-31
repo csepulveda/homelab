@@ -4,7 +4,15 @@ democratic-csi:
       enabled: true
       image:
         registry: docker.io/democraticcsi/democratic-csi
-        tag: next
+        # Pinned: la build `next` de 2026-10 exige TrueNAS >= 26 y el driver
+        # freenas-api-* deja de arrancar contra SCALE 25.04. v1.9.5 (2026-01)
+        # es la misma build que corria antes como `next`.
+        tag: v1.9.5
+  node:
+    driver:
+      image:
+        registry: docker.io/democraticcsi/democratic-csi
+        tag: v1.9.5
   csiDriver:
     name: org.democratic-csi.iscsi
   driver:
