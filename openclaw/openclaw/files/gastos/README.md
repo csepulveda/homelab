@@ -58,7 +58,7 @@ oc automations create "0 21 * * *" --name "gastos: pendientes" --tz America/Sant
   - `Compra`, `Transferencia` y `Cartola` usan la contraparte exacta. Las transferencias de la cartola (`TRANSFER A J.PEREZ ROJA`) también coinciden por nombre abreviado con la regla del correo.
   - `Contiene` aplica a todo movimiento cuyo nombre o mensaje contenga el texto: `gastos regla taller Transporte`, o por WhatsApp "regla taller = Transporte".
   - Cada regla nueva o corregida se aplica **retroactivamente** a toda la planilla (`gastos reaplicar` lo fuerza).
-- **Categorías**: nombre, descripción (gemma la usa para sugerir) y si suma al gasto. Se edita en la planilla o con `gastos categoria "Mascotas" "descripción" [--no-suma]`.
+- **Categorías**: nombre, descripción (gemma la usa para sugerir) y si suma al gasto. Se edita en la planilla, con `gastos categoria "Mascotas" "descripción" [--no-suma]`, o por WhatsApp: "G12 nueva Regalos" (crea y asigna) o "nueva Regalos: descripción" (solo crea).
 - **Cartolas**: períodos procesados y si cuadraron.
 
 Por defecto no suman al gasto: Traspaso propio, Pago tarjeta, Préstamo e Ingreso (columna "Suma al gasto" de Categorías).

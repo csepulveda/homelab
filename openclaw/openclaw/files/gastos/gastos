@@ -619,7 +619,8 @@ AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
          "• \"pendientes\": lo que falta confirmar\n"
          "• \"G12 1\", \"T3 arriendo fijo\", \"G15 farmacia\": responder una pregunta\n"
          "• \"corregir G5 supermercado\": cambiar uno ya registrado\n"
-         "• \"regla taller = Transporte\": todo lo que diga \"taller\" va a esa categoría (también lo pasado)")
+         "• \"regla taller = Transporte\": todo lo que diga \"taller\" va a esa categoría (también lo pasado)\n"
+         "• \"G12 nueva Regalos\": crea la categoría Regalos y le asigna G12 (\"nueva Regalos: descripción\" solo la crea)")
 
 
 def cmd_responder(args):
@@ -636,6 +637,18 @@ def cmd_responder(args):
     if m:
         args.id, args.texto = m.group(3), [m.group(4)]
         return cmd_corregir(args)
+    # "G12 nueva Regalos [fijo]" crea la categoría y la asigna; "nueva Regalos: descripción" solo la crea.
+    m = re.fullmatch(r"(?:([GTC]\d{1,5})\s+)?(?:nueva|crear)\s+(?:categor[ií]a\s+)?([^:]{1,40}?)(?:\s*:\s*(.{1,150}))?(\s+fijo)?",
+                     texto, flags=re.I)
+    if m:
+        st, sh = State(), Sheet()
+        nombre, creada = crear_categoria(sh, m.group(2).strip(" \"'"), (m.group(3) or "").strip())
+        out = f"✓ Categoría \"{nombre}\" " + ("creada" if creada else "ya existía")
+        gid = m.group(1).upper() if m.group(1) else (None if m.group(3) else st.d.get("ultima_pregunta"))
+        if gid:
+            out += "\n" + aplicar(sh, st, gid, nombre, bool(m.group(4)))
+        print(out)
+        return
     m = re.fullmatch(r"regla\s+(.+?)\s*(?:=|->|→|:)\s*(.+?)(\s+fijo)?", texto, flags=re.I)
     if m:
         args.texto, args.categoria, args.fijo = m.group(1).strip(" \"'"), m.group(2), bool(m.group(3))
@@ -652,7 +665,8 @@ def cmd_responder(args):
     p = st.d["pendientes"].get(gid, {})
     cat = interpretar(re.sub(r"\b[GTC]\d{1,5}\b", "", texto, flags=re.I), p.get("opciones"))
     if not cat:
-        print(f"No entendí la categoría para {gid}. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría"))
+        print(f"No entendí la categoría para {gid}. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría")
+              + f"\nPara crear una nueva: {gid} nueva <nombre>")
         return
     fijo = bool(re.search(r"\bfijo\b", norm(texto).lower()))
     out = aplicar(sh, st, gid, cat, fijo)
@@ -682,6 +696,22 @@ def cmd_regla(args):
     n = reaplicar(sh, st)
     print(f"✓ Regla: todo lo que contenga \"{args.texto}\" → {cat}" + (" (fijo)" if args.fijo else "")
           + f". {n} movimientos actualizados.")
+
+
+def crear_categoria(sh, nombre, descripcion="", suma=True):
+    """Agrega (o actualiza) una categoría en la pestaña Categorías y la deja disponible en este proceso."""
+    rows = sh.rows("Categorías", len(CATEGORIAS_COLS))
+    for i, r in enumerate(rows[1:], start=2):
+        if r and norm(r[0]) == norm(nombre):
+            if descripcion:
+                sh.update(f"Categorías!B{i}", [[descripcion]])
+            return r[0], False
+    sh.append("Categorías", [[nombre, descripcion, "sí" if suma else "no"]])
+    CATS[nombre] = descripcion
+    ALL_CATS.insert(-1, nombre)
+    if not suma:
+        NO_GASTO.add(nombre)
+    return nombre, True
 
 
 def cmd_categoria(args):
