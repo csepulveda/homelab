@@ -24,7 +24,8 @@ Cluster Kubernetes K3s on-premise de 3 nodos control-plane (HA con etcd embebido
 | **Plataforma** | TrueNAS SCALE 25.04 |
 | **CPU** | Intel Xeon E5-2680 v4 (14C/28T @ 2.40GHz) |
 | **RAM** | 128GB ECC |
-| **Storage** | Pool `Storage` RAIDZ 3.5TB (datos, NFS, iSCSI) + 1 NVMe dedicado por VM |
+| **Discos** | 12 SSD SATA: 8× 480GB en el pool `Storage` (2 vdevs RAIDZ1 de 4), 3× 480GB como pool dedicado por VM (`node001/2/3`), 1× 250GB `boot-pool`. Sin hot spares |
+| **Storage** | Pool `Storage` 3.5TB (datos, NFS, iSCSI, S3) + un pool SSD dedicado por VM del cluster |
 | **Controladora** | LSI 9300 12Gbps 16 ports |
 | **Red** | 10GbE SFP+ (bridge `br0`) |
 | **Función** | Hipervisor de las VMs del cluster + NFS/iSCSI + S3 (RustFS) para Loki |
@@ -33,12 +34,13 @@ Cluster Kubernetes K3s on-premise de 3 nodos control-plane (HA con etcd embebido
 
 | Nodo | vCPU | RAM | Disco | IP | Rol |
 |------|------|-----|-------|----|-----|
-| **node001** | 8 | 24GB | 120GB (NVMe propio) | 192.168.100.156 | control-plane, etcd (`cluster-init`) |
-| **node002** | 8 | 24GB | 120GB (NVMe propio) | 192.168.100.157 | control-plane, etcd |
-| **node003** | 8 | 24GB | 120GB (NVMe propio) | 192.168.100.158 | control-plane, etcd |
+| **node001** | 8 | 24GB | zvol 120GB en pool `node001` (SSD propio) | 192.168.100.156 | control-plane, etcd (`cluster-init`), VIP preferente |
+| **node002** | 8 | 24GB | zvol 120GB en pool `node002` (SSD propio) | 192.168.100.157 | control-plane, etcd |
+| **node003** | 8 | 24GB | zvol 120GB en pool `node003` (SSD propio) | 192.168.100.158 | control-plane, etcd |
 
-- API server en alta disponibilidad detrás de la VIP **192.168.100.5** (keepalived/VRRP).
-- Ubuntu 24.04 LTS, containerd, sin swap.
+- API server en alta disponibilidad detrás de la VIP **192.168.100.5** (keepalived/VRRP, prioridades 120/110/100).
+- Ubuntu 24.04 LTS, containerd, sin swap. Los tres nodos son control-plane + etcd: nunca más de uno fuera de servicio a la vez.
+- En el mismo NAS corren además una VM `OpenClaw` (8 vCPU / 8GB) y contenedores Incus ajenos al cluster.
 
 ## 🌐 Arquitectura de Red
 
@@ -63,6 +65,18 @@ Internet (1 Gbps) ── Router ISP ── DMZ ──▶ 192.168.100.200 (Cilium
 - **iscsi** (ReadWriteOnce, ext4): bases de datos y workloads con estado. Un zvol ZFS por volumen.
 - **nfs** (ReadWriteMany): media, backups y volúmenes compartidos. Un dataset ZFS por volumen.
 - **local-path** (default de K3s): solo pruebas.
+
+### Respaldos
+
+| Dato | Copia local | Copia fuera del NAS |
+|------|-------------|---------------------|
+| Datasets de Kubernetes (`Storage/k8s`, NFS + zvols iSCSI) | Snapshots ZFS recursivos: diario 02:00 (14 días) y semanal domingo 03:00 (8 semanas) | — |
+| Fotos de Immich (PVC `immich-backup`, NFS) | Snapshots ZFS | Cloud Sync semanal a Amazon S3 (domingo 00:00) |
+| Base de datos de Immich (CloudNativePG `immich-pg`) | Backup físico diario + WAL continuo al S3 del NAS (RustFS), ventana PITR de 7 días; dump lógico mensual al PVC `postgres-backup-pvc` (12 copias) | Cloud Sync semanal de los dumps a Amazon S3 (domingo 00:30) |
+| etcd de K3s | Snapshot cada 12h en cada nodo (retención 14) | Mismos snapshots al bucket `k3s-etcd` del RustFS |
+| Configuración de TrueNAS | Copia automática diaria en el `.system` dataset | Export manual (config + secret seed) tras cambios relevantes |
+
+El S3 del NAS (RustFS, app de TrueNAS) protege contra fallos del cluster, no contra la pérdida del NAS; lo que debe sobrevivir a eso va a Amazon S3.
 
 ### Benchmarks (Agosto 2025 - Red 2.5/10GbE)
 
