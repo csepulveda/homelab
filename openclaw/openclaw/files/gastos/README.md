@@ -15,7 +15,7 @@ Cada movimiento nuevo se pregunta por WhatsApp con una categoría sugerida (regl
 - `G12 restaurante permanente`: guarda la regla y no vuelve a preguntar por ese comercio.
 - `G12 arriendo fijo`: regla permanente y además marca el gasto como fijo mensual (columna Fijo).
 
-A las 21:30 llega un resumen del día (`gastos resumen`): total, número de gastos y detalle, incluidos los que se registraron solos por regla, y al final los pendientes si los hay.
+A las 21:30 llega un resumen (`gastos resumen`) de las 24 h desde el corte anterior (21:30 a 21:30): total, número de gastos y detalle, incluidos los que se registraron solos por regla, y al final los pendientes si los hay. Pedido por chat ("resumen") cubre desde el último corte hasta ese momento.
 
 ## Seguridad
 
