@@ -5,11 +5,17 @@ Registra en Google Sheets las compras con débito, las transferencias y las cart
 | Pieza | Qué hace |
 |---|---|
 | `gastos_parse.py` | Parser determinístico de los correos de BCI, de los comprobantes de Servipag y de la cartola en PDF. La cartola se valida contra su "Resumen del Periodo". |
-| `gastos` | CLI: `init`, `sync`, `cartola`, `responder`, `corregir`, `pendientes`, `regla`, `categoria`, `reaplicar`, `export` (JSON de toda la planilla para el análisis mensual). Su salida estándar se envía por WhatsApp; la salida `NO_REPLY` significa no enviar nada. |
+| `gastos` | CLI: `init`, `sync`, `cartola`, `responder`, `corregir`, `pendientes`, `resumen`, `regla`, `categoria`, `reaplicar`, `export` (JSON de toda la planilla para el análisis mensual). Su salida estándar se envía por WhatsApp; la salida `NO_REPLY` significa no enviar nada. |
 | `../gastos-bridge/` | Plugin de OpenClaw (hook `before_dispatch`) que responde los mensajes del grupo ejecutando `gastos responder <mensaje>` (argv, sin shell) y devolviendo su salida tal cual, **sin turno del modelo**. |
 | `AGENTS-gastos.md` | Instrucciones del agente `gastos`, que atiende el grupo de WhatsApp "Control Gastos": cada mensaje se pasa tal cual a `gastos responder "<mensaje>"`, y el CLI decide si es una respuesta, "pendientes", "corregir G5 …" o "ayuda". |
 
-La categorización sigue este orden: reglas aprendidas (pestaña Reglas), luego reglas fijas, y al final el modelo local (`ollama.primaryModel`, mismo `num_ctx` que OpenClaw). Si la confianza es menor a `gastos.umbral`, o la contraparte es nueva durante el período de aprendizaje, o es un destinatario de transferencia nuevo, o es una pasarela de pago (MERCADOPAGO*, TUU*…), te pregunta por WhatsApp.
+Cada movimiento nuevo se pregunta por WhatsApp con una categoría sugerida (regla determinística para comercios conocidos, si no el modelo local `ollama.primaryModel`, mismo `num_ctx` que OpenClaw). Solo se registran sin preguntar los traspasos a cuentas propias, los pagos de tarjeta y lo que ya tiene una regla permanente en la pestaña Reglas. La respuesta decide qué se aprende:
+
+- `G12 2` o `G12 restaurante`: solo ese movimiento; la próxima vez vuelve a preguntar por ese comercio.
+- `G12 restaurante permanente`: guarda la regla y no vuelve a preguntar por ese comercio.
+- `G12 arriendo fijo`: regla permanente y además marca el gasto como fijo mensual (columna Fijo).
+
+A las 21:30 llega un resumen del día (`gastos resumen`): total, número de gastos y detalle, incluidos los que se registraron solos por regla, y al final los pendientes si los hay.
 
 ## Seguridad
 
@@ -48,17 +54,17 @@ oc automations create "*/2 * * * *" --name "gastos: sync" --tz America/Santiago 
   --command-argv '["/opt/gastos-tools/gastos","sync"]' --timeout-seconds 300 --announce --channel whatsapp --to "$TO"
 oc automations create "0 10 * * *" --name "gastos: cartola" --tz America/Santiago \
   --command-argv '["/opt/gastos-tools/gastos","cartola"]' --timeout-seconds 600 --announce --channel whatsapp --to "$TO"
-oc automations create "0 21 * * *" --name "gastos: pendientes" --tz America/Santiago \
-  --command-argv '["/opt/gastos-tools/gastos","pendientes","--recordatorio"]' --announce --channel whatsapp --to "$TO"
+oc automations create "30 21 * * *" --name "gastos: resumen" --tz America/Santiago \
+  --command-argv '["/opt/gastos-tools/gastos","resumen"]' --announce --channel whatsapp --to "$TO"
 ```
 
 ## Pestañas de la planilla
 
 - **Gastos**: ID (G = compra, T = transferencia, C = cartola), fecha, hora, monto, tipo, contraparte, categoría, fijo, detalle, cuenta, estado (`auto`/`pendiente`/`revisar`/`confirmado`), fuente, conciliado y origen (comprobante o ID de Gmail).
-- **Reglas**: lo que aprende de tus respuestas. Se puede editar a mano; la columna "Preguntar siempre" sirve para contrapartes que varían. Tipos de regla:
+- **Reglas**: solo lo que pediste guardar con "permanente" o "fijo" (o con `regla …`). Se puede editar a mano; la columna "Preguntar siempre" deja una regla como sugerencia que igual pregunta. Tipos de regla:
   - `Compra`, `Transferencia` y `Cartola` usan la contraparte exacta. Las transferencias de la cartola (`TRANSFER A J.PEREZ ROJA`) también coinciden por nombre abreviado con la regla del correo.
   - `Contiene` aplica a todo movimiento cuyo nombre o mensaje contenga el texto: `gastos regla taller Transporte`, o por WhatsApp "regla taller = Transporte".
-  - Cada regla nueva o corregida se aplica **retroactivamente** a toda la planilla (`gastos reaplicar` lo fuerza).
+  - Cada regla nueva o corregida se aplica **retroactivamente** a la planilla, salvo a las filas ya confirmadas a mano (`gastos reaplicar` lo fuerza).
 - **Categorías**: nombre, descripción (gemma la usa para sugerir) y si suma al gasto. Se edita en la planilla, con `gastos categoria "Mascotas" "descripción" [--no-suma]`, o por WhatsApp: "G12 nueva Regalos" (crea y asigna) o "nueva Regalos: descripción" (solo crea).
 - **Cartolas**: períodos procesados y si cuadraron.
 
