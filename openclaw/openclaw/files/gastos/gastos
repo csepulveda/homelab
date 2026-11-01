@@ -565,7 +565,7 @@ def cmd_sync(args):
     reglas = sh.reglas()
     nxt = sh.ids()
     msgs, rows, cache, nuevos = [], [], {}, 0
-    pend_clave = {norm(p["clave"]): g for g, p in st.d["pendientes"].items()}
+    pend_clave = {(p["tipo"], norm(p["clave"])): g for g, p in st.d["pendientes"].items()}
     vistos |= {m for r in sh.gastos()[1:] if len(r) > 8 for m in re.findall(r"servipag:(\S+?)\]", r[8])}
     servipag_hoy = []  # pagos Servipag de esta corrida: (monto, fecha, fila) para no duplicar su transferencia
     for mid in reversed(search(SENDERS, dias, maximo=5000 if args.backfill else 200)):  # más antiguos primero
@@ -601,14 +601,14 @@ def cmd_sync(args):
         if k not in cache:
             cache[k] = categorizar(p, reglas)
         cat, fijo, preguntar, _ = cache[k]
-        if preguntar and args.backfill and p["monto"] < BACKFILL_MIN and norm(clave(p)) not in pend_clave:
+        if preguntar and args.backfill and p["monto"] < BACKFILL_MIN and k not in pend_clave:
             rows.append(fila(gid, p, cat, fijo, "revisar", "correo", origen))
             nuevos += 1
             continue
         rows.append(fila(gid, p, cat, fijo, "pendiente" if preguntar else "auto", "correo", origen))
         nuevos += 1
         if preguntar:
-            ya = pend_clave.get(norm(clave(p)))
+            ya = pend_clave.get(k)
             if ya:  # misma contraparte ya preguntada: se resolverá junto con esa respuesta
                 st.d["pendientes"][ya].setdefault("tambien", []).append(gid)
                 continue
@@ -616,7 +616,7 @@ def cmd_sync(args):
             st.d["pendientes"][gid] = {"opciones": ops, "sugerida": cat, "contraparte": p["contraparte"],
                                        "tipo": tipo_regla(p), "clave": clave(p), "preguntado": now(),
                                        "monto": p["monto"], "fecha": p["fecha"], "tambien": []}
-            pend_clave[norm(clave(p))] = gid
+            pend_clave[k] = gid
             if not args.backfill:
                 st.d["ultima_pregunta"] = gid
                 msgs.append(txt)
@@ -697,6 +697,9 @@ def aplicar(sh, st, gid, cat, modo="solo", quien="usuario"):
     if not row:
         return f"No encontré {gid} en la planilla."
     p = st.d["pendientes"].pop(gid, None) or {}
+    for q in st.d["pendientes"].values():  # si era un agrupado respondido por su ID, sale del grupo
+        if gid in q.get("tambien", []):
+            q["tambien"].remove(gid)
     r = r + [""] * (len(GASTOS_COLS) - len(r))
     fijo = modo == "fijo"
     agrupados = p.get("tambien", [])
@@ -708,11 +711,14 @@ def aplicar(sh, st, gid, cat, modo="solo", quien="usuario"):
             sh.update(f"Gastos!K{rw}", [["confirmado"]])
     if modo == "solo":
         # los otros movimientos de la misma contraparte se preguntan uno por uno
+        restaurados = []
         for g in agrupados:
             rw, rr = sh.find(g)
-            if rw:
+            if rw and (rr + [""] * len(GASTOS_COLS))[10] != "confirmado":
                 rr = rr + [""] * (len(GASTOS_COLS) - len(rr))
                 st.d["pendientes"][g] = {**p, "monto": num(rr[3]), "fecha": rr[1], "tambien": []}
+                restaurados.append(g)
+        agrupados = restaurados
     tipo = p.get("tipo") or {"T": "Transferencia", "C": "Cartola"}.get(gid[0], "Compra")
     cl = p.get("clave") or r[5]
     msg = f"✓ {gid} → {cat}" + (" (fijo mensual)" if fijo else "")
@@ -824,7 +830,9 @@ def cmd_responder(args):
     out = aplicar(sh, st, gid, cat, modo_de(texto))
     resto = [g for g in st.d["pendientes"] if g != gid]
     if resto:
-        out += f"\nQuedan {len(resto)} pendientes" + (f"; siguiente: {resto[0]}" if len(resto) else "")
+        q = st.d["pendientes"][resto[0]]
+        out += (f"\nQuedan {len(resto)} pendientes; siguiente: {resto[0]} "
+                f"({clp(q.get('monto', 0))} en {q.get('contraparte', '')}, {q.get('fecha', '')})")
     print(out)
 
 
@@ -1173,7 +1181,7 @@ def cmd_cartola(args):
                     preguntar = fija != "Pago tarjeta"  # sin regla permanente se pregunta siempre
             nuevas.append((item, mv, cat, preguntar))
         filas_out, n_preg, nxt = [], 0, sh.ids()
-        pend_clave = {p["clave"]: g for g, p in st.d["pendientes"].items()}
+        pend_clave = {(p["tipo"], norm(p["clave"])): g for g, p in st.d["pendientes"].items()}
         for item, mv, cat, preguntar in nuevas:
             gid = nxt("C")
             tipo = "Ingreso" if mv["tipo"] == "abono" else "Cargo cartola"
@@ -1184,11 +1192,11 @@ def cmd_cartola(args):
             filas_out.append([gid, mv["fecha"], "", mv["monto"], tipo, item["contraparte"], cat, "", mv["descripcion"],
                               "", estado, "cartola", "✅", f"cartola:{desde}", now()])
             if estado == "pendiente":
-                ya = pend_clave.get(item["contraparte"]) if not generico else None
+                ya = pend_clave.get(("Cartola", norm(item["contraparte"]))) if not generico else None
                 if ya:
                     st.d["pendientes"][ya].setdefault("tambien", []).append(gid)
                     continue
-                pend_clave[item["contraparte"]] = gid
+                pend_clave[("Cartola", norm(item["contraparte"]))] = gid
                 n_preg += 1
                 st.d["pendientes"][gid] = {"opciones": opciones_para(cat),
                                            "sugerida": cat, "contraparte": item["contraparte"], "tipo": "Cartola",
