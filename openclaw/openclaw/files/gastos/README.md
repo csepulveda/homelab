@@ -15,7 +15,7 @@ Cada movimiento nuevo se pregunta por WhatsApp con una categoría sugerida (regl
 - `G12 restaurante permanente`: guarda la regla y no vuelve a preguntar por ese comercio.
 - `G12 arriendo fijo`: regla permanente y además marca el gasto como fijo mensual (columna Fijo).
 
-A las 21:30 llega un resumen del día (`gastos resumen`): total, número de gastos y detalle, incluidos los que se registraron solos por regla, y al final los pendientes si los hay.
+A las 21:30 llega un resumen (`gastos resumen`) de las 24 h desde el corte anterior (21:30 a 21:30): total, número de gastos y detalle, incluidos los que se registraron solos por regla, y al final los pendientes si los hay. Pedido por chat ("resumen") cubre desde el último corte hasta ese momento.
 
 ## Seguridad
 
@@ -64,7 +64,7 @@ oc automations create "30 21 * * *" --name "gastos: resumen" --tz America/Santia
 - **Reglas**: solo lo que pediste guardar con "permanente" o "fijo" (o con `regla …`). Se puede editar a mano; la columna "Preguntar siempre" deja una regla como sugerencia que igual pregunta. Tipos de regla:
   - `Compra`, `Transferencia` y `Cartola` usan la contraparte exacta. Las transferencias de la cartola (`TRANSFER A J.PEREZ ROJA`) también coinciden por nombre abreviado con la regla del correo.
   - `Contiene` aplica a todo movimiento cuyo nombre o mensaje contenga el texto: `gastos regla taller Transporte`, o por WhatsApp "regla taller = Transporte".
-  - Cada regla nueva o corregida se aplica **retroactivamente** a la planilla, salvo a las filas ya confirmadas a mano (`gastos reaplicar` lo fuerza).
+  - Cada regla nueva o corregida se aplica **retroactivamente** a la planilla, sin tocar las filas con estado `confirmado`. `gastos reaplicar` vuelve a correr todas las reglas con la misma excepción.
 - **Categorías**: nombre, descripción (gemma la usa para sugerir) y si suma al gasto. Se edita en la planilla, con `gastos categoria "Mascotas" "descripción" [--no-suma]`, o por WhatsApp: "G12 nueva Regalos" (crea y asigna) o "nueva Regalos: descripción" (solo crea).
 - **Cartolas**: períodos procesados y si cuadraron.
 
