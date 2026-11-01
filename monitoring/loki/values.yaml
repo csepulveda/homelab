@@ -46,10 +46,25 @@ loki:
     auth_enabled: false
     commonConfig:
       replication_factor: 2
-    ingesterConfig:
-      chunk_target_size: 102400    # 100KB (más pequeño)
-      chunk_idle_period: 5m       # 5 min (más rápido)
-      max_chunk_age: 10m          # 10 min (más rápido)
+    # Retención: sin esto Loki nunca borra nada del bucket (al 2026-11-01 había
+    # 383k objetos / 16 GB en rustfs, 278k con más de 90 días). El compactor corre
+    # en el target backend y aplica retention_period de limits_config.
+    compactor:
+      retention_enabled: true
+      delete_request_store: s3
+      compaction_interval: 10m
+      retention_delete_delay: 2h
+      retention_delete_worker_count: 50
+    limits_config:
+      retention_period: 60d
+    # Menos objetos y menos LIST contra rustfs: chunks más grandes y resync del
+    # índice cada 15 min en vez de 5 (valores por defecto: 30m / 2h / 5m).
+    ingester:
+      chunk_idle_period: 1h
+      max_chunk_age: 4h
+    storage_config:
+      tsdb_shipper:
+        resync_interval: 15m
   minio:
     enabled: false
   read:
