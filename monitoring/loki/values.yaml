@@ -56,7 +56,7 @@ loki:
       retention_delete_delay: 2h
       retention_delete_worker_count: 50
     limits_config:
-      retention_period: 30d
+      retention_period: 60d
     # Menos objetos y menos LIST contra rustfs: chunks más grandes y resync del
     # índice cada 15 min en vez de 5 (valores por defecto: 30m / 2h / 5m).
     ingester:
