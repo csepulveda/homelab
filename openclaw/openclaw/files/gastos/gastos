@@ -527,7 +527,11 @@ def servipag(sh, st, p, reglas, nxt, rows, servipag_hoy, args):
         if "servipag:" in r[8] or num(r[3]) != p["monto"] or not _cerca(r[1], p["fecha"], 3):
             continue
         if "SERVIPAG" in norm(r[5]) or norm(r[5]) == "PAGO CUENTAS VIA INTERNET":
-            estado = "pendiente" if preguntar else ("confirmado" if r[10] == "confirmado" else "auto")
+            if r[10] == "confirmado":  # el usuario ya la categorizó: solo se completa el detalle
+                sh.update(f"Gastos!I{i}", [[detalle]])
+                servipag_hoy.append((p["monto"], p["fecha"], r[0]))
+                return None
+            estado = "pendiente" if preguntar else "auto"
             sh.update(f"Gastos!G{i}:I{i}", [[cat, "sí" if fijo else r[7], detalle]])
             sh.update(f"Gastos!K{i}", [[estado]])
             st.d["pendientes"].pop(r[0], None)
@@ -695,19 +699,29 @@ def aplicar(sh, st, gid, cat, modo="solo", quien="usuario"):
     p = st.d["pendientes"].pop(gid, None) or {}
     r = r + [""] * (len(GASTOS_COLS) - len(r))
     fijo = modo == "fijo"
-    for g in [gid] + p.get("tambien", []):
+    agrupados = p.get("tambien", [])
+    for g in [gid] + ([] if modo == "solo" else agrupados):
         rw, rr = sh.find(g)
         if rw:
             rr = rr + [""] * (len(GASTOS_COLS) - len(rr))
             sh.update(f"Gastos!G{rw}:H{rw}", [[cat, "sí" if fijo else rr[7]]])
             sh.update(f"Gastos!K{rw}", [["confirmado"]])
+    if modo == "solo":
+        # los otros movimientos de la misma contraparte se preguntan uno por uno
+        for g in agrupados:
+            rw, rr = sh.find(g)
+            if rw:
+                rr = rr + [""] * (len(GASTOS_COLS) - len(rr))
+                st.d["pendientes"][g] = {**p, "monto": num(rr[3]), "fecha": rr[1], "tambien": []}
     tipo = p.get("tipo") or {"T": "Transferencia", "C": "Cartola"}.get(gid[0], "Compra")
     cl = p.get("clave") or r[5]
     msg = f"✓ {gid} → {cat}" + (" (fijo mensual)" if fijo else "")
-    if p.get("tambien"):
-        msg += f" (y {len(p['tambien'])} movimientos más de {p['contraparte']})"
+    if agrupados and modo != "solo":
+        msg += f" (y {len(agrupados)} movimientos más de {p['contraparte']})"
     if modo == "solo":
         msg += " · solo este"
+        if agrupados:
+            msg += f"; quedan {len(agrupados)} más de {p['contraparte']} por confirmar"
     elif cl and not re.search(GENERICOS, norm(cl)):
         sh.set_regla(tipo, cl, cat, fijo, quien)
         msg += f". Regla permanente para \"{cl.split('|')[0]}\""
@@ -953,10 +967,18 @@ def resumen_texto(sh, fecha):
     return "\n".join(lines)
 
 
+def hoy_chile():
+    try:
+        from zoneinfo import ZoneInfo
+        return dt.datetime.now(ZoneInfo("America/Santiago")).date()
+    except Exception:  # sin tzdata: offset fijo
+        return dt.datetime.now(TZ).date()
+
+
 def cmd_resumen(args):
     """Resumen del día para el cron de las 21:30: siempre se envía, con los pendientes al final."""
     st, sh = State(), Sheet()
-    fecha = dt.date.fromisoformat(args.fecha) if args.fecha else dt.datetime.now(TZ).date()
+    fecha = dt.date.fromisoformat(args.fecha) if args.fecha else hoy_chile()
     out = resumen_texto(sh, fecha)
     if st.d["pendientes"]:
         out += "\n\n" + pendientes_texto(st, recordatorio=True)

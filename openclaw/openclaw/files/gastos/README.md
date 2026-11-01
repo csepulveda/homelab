@@ -64,7 +64,7 @@ oc automations create "30 21 * * *" --name "gastos: resumen" --tz America/Santia
 - **Reglas**: solo lo que pediste guardar con "permanente" o "fijo" (o con `regla …`). Se puede editar a mano; la columna "Preguntar siempre" deja una regla como sugerencia que igual pregunta. Tipos de regla:
   - `Compra`, `Transferencia` y `Cartola` usan la contraparte exacta. Las transferencias de la cartola (`TRANSFER A J.PEREZ ROJA`) también coinciden por nombre abreviado con la regla del correo.
   - `Contiene` aplica a todo movimiento cuyo nombre o mensaje contenga el texto: `gastos regla taller Transporte`, o por WhatsApp "regla taller = Transporte".
-  - Cada regla nueva o corregida se aplica **retroactivamente** a la planilla, salvo a las filas ya confirmadas a mano (`gastos reaplicar` lo fuerza).
+  - Cada regla nueva o corregida se aplica **retroactivamente** a la planilla, sin tocar las filas ya confirmadas a mano. `gastos reaplicar` vuelve a correr todas las reglas con la misma excepción.
 - **Categorías**: nombre, descripción (gemma la usa para sugerir) y si suma al gasto. Se edita en la planilla, con `gastos categoria "Mascotas" "descripción" [--no-suma]`, o por WhatsApp: "G12 nueva Regalos" (crea y asigna) o "nueva Regalos: descripción" (solo crea).
 - **Cartolas**: períodos procesados y si cuadraron.
 
