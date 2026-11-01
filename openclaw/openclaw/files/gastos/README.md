@@ -5,7 +5,7 @@ Registra en Google Sheets las compras con débito, las transferencias y las cart
 | Pieza | Qué hace |
 |---|---|
 | `gastos_parse.py` | Parser determinístico de los correos de BCI, de los comprobantes de Servipag y de la cartola en PDF. La cartola se valida contra su "Resumen del Periodo". |
-| `gastos` | CLI: `init`, `sync`, `cartola`, `responder`, `corregir`, `pendientes`, `resumen`, `regla`, `categoria`, `reaplicar`, `export` (JSON de toda la planilla para el análisis mensual). Su salida estándar se envía por WhatsApp; la salida `NO_REPLY` significa no enviar nada. |
+| `gastos` | CLI: `init`, `sync`, `cartola`, `responder`, `corregir`, `gasto`, `nota`, `pendientes`, `resumen`, `regla`, `categoria`, `reaplicar`, `export` (JSON de toda la planilla para el análisis mensual). Su salida estándar se envía por WhatsApp; la salida `NO_REPLY` significa no enviar nada. |
 | `../gastos-bridge/` | Plugin de OpenClaw (hook `before_dispatch`) que responde los mensajes del grupo ejecutando `gastos responder <mensaje>` (argv, sin shell) y devolviendo su salida tal cual, **sin turno del modelo**. |
 | `AGENTS-gastos.md` | Instrucciones del agente `gastos`, que atiende el grupo de WhatsApp "Control Gastos": cada mensaje se pasa tal cual a `gastos responder "<mensaje>"`, y el CLI decide si es una respuesta, "pendientes", "corregir G5 …" o "ayuda". |
 
@@ -14,6 +14,9 @@ Cada movimiento nuevo se pregunta por WhatsApp con una categoría sugerida (regl
 - `G12 2` o `G12 restaurante`: solo ese movimiento; la próxima vez vuelve a preguntar por ese comercio.
 - `G12 restaurante permanente`: guarda la regla y no vuelve a preguntar por ese comercio.
 - `G12 arriendo fijo`: regla permanente y además marca el gasto como fijo mensual (columna Fijo).
+- `G12 2 nota: almuerzo con Cata` (o `G12 restaurante - con Cata`): además deja una observación en la columna Nota. También después: `G12 nota: …`, o `nota …` para el último preguntado.
+
+Si el banco no avisó (o fue en efectivo), el gasto se anota a mano: `gasto 25000 almuerzo - con Cata`, `gasté 8000 estacionamiento ayer efectivo`, `pagué 45 lucas regalo el 30/10 santander`. Queda con ID `M…`, tipo `Manual` y fuente `manual`; si el texto trae una categoría reconocible se registra confirmado, si no se pregunta como cualquier otro (sin "permanente": no hay comercio que aprender). Con cuenta BCI (por defecto) se concilia con la cartola; `efectivo` y `santander` quedan `n/a`.
 
 A las 21:30 llega un resumen (`gastos resumen`) de las 24 h desde el corte anterior (21:30 a 21:30): total, número de gastos y detalle, incluidos los que se registraron solos por regla, y al final los pendientes si los hay. Pedido por chat ("resumen") cubre desde el último corte hasta ese momento.
 
@@ -60,7 +63,7 @@ oc automations create "30 21 * * *" --name "gastos: resumen" --tz America/Santia
 
 ## Pestañas de la planilla
 
-- **Gastos**: ID (G = compra, T = transferencia, C = cartola), fecha, hora, monto, tipo, contraparte, categoría, fijo, detalle, cuenta, estado (`auto`/`pendiente`/`revisar`/`confirmado`), fuente, conciliado y origen (comprobante o ID de Gmail).
+- **Gastos**: ID (G = compra, T = transferencia, C = cartola, M = manual), fecha, hora, monto, tipo, contraparte, categoría, fijo, detalle, cuenta, estado (`auto`/`pendiente`/`revisar`/`confirmado`), fuente, conciliado, origen (comprobante o ID de Gmail), registrado y nota (observación del usuario). La columna Nota se agrega sola a planillas creadas antes.
 - **Reglas**: solo lo que pediste guardar con "permanente" o "fijo" (o con `regla …`). Se puede editar a mano; la columna "Preguntar siempre" deja una regla como sugerencia que igual pregunta. Tipos de regla:
   - `Compra`, `Transferencia` y `Cartola` usan la contraparte exacta. Las transferencias de la cartola (`TRANSFER A J.PEREZ ROJA`) también coinciden por nombre abreviado con la regla del correo.
   - `Contiene` aplica a todo movimiento cuyo nombre o mensaje contenga el texto: `gastos regla taller Transporte`, o por WhatsApp "regla taller = Transporte".
