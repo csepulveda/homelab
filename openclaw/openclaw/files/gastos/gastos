@@ -8,6 +8,8 @@ Subcomandos:
   cartola [--dias N]           procesa cartolas: cuadra, concilia y agrega lo que falta
   responder <texto>            aplica la respuesta del usuario a una pregunta pendiente
   corregir <ID> <texto>        cambia la categoría de un movimiento ya registrado
+  gasto <texto>                registra a mano un gasto del que no llegó correo ("25000 almuerzo - con Cata")
+  nota <ID> <texto>            deja una nota u observación en un movimiento
   pendientes [--recordatorio]  lista lo que falta confirmar
   resumen [--fecha AAAA-MM-DD] resumen de las 24 h hasta el corte de las 21:30 (total, detalle y pendientes)
 
@@ -47,7 +49,8 @@ SENDERS = "from:(contacto@bci.cl OR transferencias@bci.cl OR contacto@servipag.c
 CARTOLA_Q = 'from:bcimail@bci.cl subject:"Cartola Cuenta Corriente" has:attachment'
 
 GASTOS_COLS = ["ID", "Fecha", "Hora", "Monto", "Tipo", "Contraparte", "Categoría", "Fijo", "Detalle",
-               "Cuenta/Tarjeta", "Estado", "Fuente", "Conciliado", "Origen", "Registrado"]
+               "Cuenta/Tarjeta", "Estado", "Fuente", "Conciliado", "Origen", "Registrado", "Nota"]
+COL_NOTA = chr(64 + len(GASTOS_COLS))  # "P"
 REGLAS_COLS = ["Tipo", "Clave", "Categoría", "Fijo", "Preguntar siempre", "Origen", "Actualizado"]
 CARTOLAS_COLS = ["Desde", "Hasta", "Cargos", "Abonos", "Cuadra", "Movimientos", "Agregados", "Procesado"]
 
@@ -247,7 +250,11 @@ class Sheet:
 
     def gastos(self):
         if self._gastos is None:
-            self._gastos = self.rows("Gastos", len(GASTOS_COLS))
+            rows = self.rows("Gastos", len(GASTOS_COLS))
+            if rows and len(rows[0]) < len(GASTOS_COLS):  # planilla creada antes de agregar columnas (Nota)
+                self.update(f"Gastos!A1:{chr(64 + len(GASTOS_COLS))}1", [GASTOS_COLS])
+                rows[0] = list(GASTOS_COLS)
+            self._gastos = rows
         return self._gastos
 
     def find(self, gid):
@@ -279,7 +286,7 @@ class Sheet:
         """Generador de IDs por prefijo a partir de lo que ya hay en la planilla (una sola lectura)."""
         last = {}
         for r in self.gastos()[1:]:
-            m = re.fullmatch(r"([GTC])(\d+)", r[0]) if r else None
+            m = re.fullmatch(r"([GTCM])(\d+)", r[0]) if r else None
             if m:
                 last[m.group(1)] = max(last.get(m.group(1), 0), int(m.group(2)))
 
@@ -318,7 +325,8 @@ def cmd_init(_args):
             gog("sheets", "add-tab", SHEET, t, parse=False)
     sh = Sheet()
     for tab, cols in (("Gastos", GASTOS_COLS), ("Reglas", REGLAS_COLS), ("Cartolas", CARTOLAS_COLS)):
-        if not sh.rows(tab, len(cols)):
+        rows = sh.rows(tab, len(cols))
+        if not rows or rows[0] != cols:  # planilla nueva o columnas agregadas después (p.ej. Nota)
             sh.update(f"{tab}!A1:{chr(64 + len(cols))}1", [cols])
     formatos()
     for tab in ("Gastos", "Reglas", "Cartolas"):
@@ -397,6 +405,8 @@ def sugerir(item):
                 f"mensaje: '{item.get('mensaje') or ''}'")
     elif item["tipo"] == "servipag":
         user = f"Pago de cuenta(s) vía Servipag a: '{item.get('mensaje') or item['contraparte']}'"
+    elif item["tipo"] == "manual":
+        user = f"Gasto anotado a mano por el titular: '{item['contraparte']}' {item.get('mensaje') or ''}".strip()
     else:
         user = f"Cargo en cartola de cuenta corriente: '{item['contraparte']}'"
     js = llm(llm_system(), user) or {}
@@ -450,14 +460,16 @@ def pregunta(gid, item, cat):
                 f"({item.get('banco') or ''} ****{item.get('cuenta4') or ''}){hora}")
         if item.get("mensaje") and item["mensaje"].lower() != "sin mensaje":
             head += f'\nMensaje: "{item["mensaje"]}"'
-    elif item["tipo"] == "compra":
+    elif item["tipo"] in ("compra", "manual"):
         head = f"🤔 {gid}: {clp(item['monto'])} en {item['contraparte']} ({item['fecha']}{hora})"
     else:
         head = f"🤔 {gid}: cargo {clp(item['monto'])} '{item['contraparte']}' ({item['fecha']})"
+    if item["tipo"] == "manual":
+        return head + f"\n{opciones_txt(ops)}\nResponde \"{gid} 2\" o \"{gid} restaurante\".", ops
     quien = "este destinatario" if item["tipo"] == "transferencia" else "este comercio"
     return head + (f"\n{opciones_txt(ops)}\nResponde \"{gid} 2\" o \"{gid} restaurante\" (solo este). "
                    f"Agrega \"permanente\" para no volver a preguntar por {quien}, "
-                   f"o \"fijo\" si además es un gasto fijo mensual."), ops
+                   f"o \"fijo\" si además es un gasto fijo mensual. Con \"nota: …\" dejas una observación."), ops
 
 
 # --- sync de correos -------------------------------------------------------------
@@ -493,7 +505,8 @@ def fila(gid, item, cat, fijo, estado, fuente, origen):
         detalle = f"{item['moneda']} {item['monto']} · {detalle}".strip(" ·")
         monto, estado = "", "revisar"
     return [gid, item["fecha"], item.get("hora") or "", monto, tipo, item["contraparte"], cat,
-            "sí" if fijo else "", detalle, f"****{cuenta}" if cuenta else "", estado, fuente, "", origen, now()]
+            "sí" if fijo else "", detalle, f"****{cuenta}" if cuenta else "", estado, fuente, "", origen, now(),
+            item.get("nota") or ""]
 
 
 def _cerca(f1, f2, dias):
@@ -692,10 +705,12 @@ def modo_de(texto):
     return "solo"
 
 
-def aplicar(sh, st, gid, cat, modo="solo", quien="usuario"):
+def aplicar(sh, st, gid, cat, modo="solo", quien="usuario", nota=None):
     row, r = sh.find(gid)
     if not row:
         return f"No encontré {gid} en la planilla."
+    if gid.startswith("M") and modo != "solo":
+        modo = "solo"  # un gasto manual no tiene contraparte bancaria que aprender
     p = st.d["pendientes"].pop(gid, None) or {}
     for q in st.d["pendientes"].values():  # si era un agrupado respondido por su ID, sale del grupo
         if gid in q.get("tambien", []):
@@ -719,9 +734,16 @@ def aplicar(sh, st, gid, cat, modo="solo", quien="usuario"):
                 st.d["pendientes"][g] = {**p, "monto": num(rr[3]), "fecha": rr[1], "tambien": []}
                 restaurados.append(g)
         agrupados = restaurados
-    tipo = p.get("tipo") or {"T": "Transferencia", "C": "Cartola"}.get(gid[0], "Compra")
+    tipo = p.get("tipo") or {"T": "Transferencia", "C": "Cartola", "M": "Manual"}.get(gid[0], "Compra")
     cl = p.get("clave") or r[5]
     msg = f"✓ {gid} → {cat}" + (" (fijo mensual)" if fijo else "")
+    if nota:
+        sh.update(f"Gastos!{COL_NOTA}{row}", [[nota]])
+        msg += f' · nota: "{nota}"'
+    if gid.startswith("M"):
+        st.d["ultima_pregunta"] = None if st.d.get("ultima_pregunta") == gid else st.d.get("ultima_pregunta")
+        st.save()
+        return msg
     if agrupados and modo != "solo":
         msg += f" (y {len(agrupados)} movimientos más de {p['contraparte']})"
     if modo == "solo":
@@ -752,6 +774,9 @@ AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
          "• \"G12 restaurante permanente\": no vuelvo a preguntar por ese comercio\n"
          "• \"T3 arriendo fijo\": permanente y además gasto fijo mensual\n"
          "• \"corregir G5 supermercado [permanente|fijo]\": cambiar uno ya registrado\n"
+         "• \"gasto 25000 almuerzo - con Cata\": registrar a mano uno que no avisó el banco "
+         "(opcional \"ayer\", \"30/10\", \"efectivo\", \"santander\")\n"
+         "• \"G12 nota: almuerzo con Cata\": dejar una observación (o \"G12 2 nota: …\" al responder)\n"
          "• \"resumen\": total y detalle de hoy (también llega solo a las 21:30)\n"
          "• \"regla taller = Transporte\": todo lo que diga \"taller\" va a esa categoría (también lo pasado)\n"
          "• \"G12 nueva Regalos\": crea la categoría Regalos y le asigna G12 (\"nueva Regalos: descripción\" solo la crea)")
@@ -760,7 +785,7 @@ AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
 def cmd_responder(args):
     # Varias líneas con ID ("C6 1\nC15 servicios básicos"): una respuesta por línea.
     lineas = [l.strip() for l in " ".join(args.texto).splitlines() if l.strip()]
-    if len(lineas) > 1 and sum(bool(re.match(r"[GTCgtc]\d{1,5}\b", l)) for l in lineas) >= 2:
+    if len(lineas) > 1 and sum(bool(re.match(r"[GTCMgtcm]\d{1,5}\b", l)) for l in lineas) >= 2:
         import contextlib
         import io
         salidas = []
@@ -778,19 +803,31 @@ def cmd_responder(args):
     texto = re.sub(r"^(\s*\[[^\]]{1,80}\]\s*)+", "", texto).strip()
     t = norm(texto).lower()
     # En el grupo de gastos todo mensaje llega aquí: el CLI decide, no el modelo.
-    tiene_id = bool(re.search(r"\b[gtc]\d{1,5}\b", t))
+    tiene_id = bool(re.search(r"\b[gtcm]\d{1,5}\b", t))
+    # Primero lo que lleva texto libre (una nota o un gasto manual pueden decir "hoy", "lista", etc.).
+    # "G12 nota: almuerzo con Cata" / "nota G12 almuerzo" / "nota almuerzo" (al último preguntado)
+    m = re.fullmatch(r"(?:([GTCM]\d{1,5})\s+)?(?:nota|obs|observaci[oó]n)\s*:?\s+(?:([GTCM]\d{1,5})\s*:?\s+)?(.+)",
+                     texto, flags=re.I | re.S)
+    if m:
+        args.id, args.texto = (m.group(1) or m.group(2) or "").upper() or None, [m.group(3).strip()]
+        return cmd_nota(args)
+    if not tiene_id and re.match(GASTO_MANUAL, t):
+        args.texto = [texto]
+        return cmd_gasto(args)
+    # corregir sobre el texto original: la nota conserva mayúsculas y acentos
+    m = re.fullmatch(r"(corregir|cambiar|corrige|cambia)\s+(el\s+)?([GTCM]\d{1,5})\s+(?:a\s+|por\s+|era\s+)?(.+)",
+                     texto, flags=re.I | re.S)
+    if m:
+        args.id, args.texto = m.group(3), [m.group(4)]
+        return cmd_corregir(args)
     if not tiene_id and re.search(r"pendiente|\bfalta|\blista\b|\blistar\b|por confirmar|sin confirmar", t):
         args.recordatorio = False
         return cmd_pendientes(args)
     if not tiene_id and re.search(r"\bresumen\b|\bhoy\b|cuanto (llevo|gaste)", t):
         args.fecha = None
         return cmd_resumen(args)
-    m = re.fullmatch(r"(corregir|cambiar|corrige|cambia)\s+(el\s+)?([gtc]\d{1,5})\s+(?:a\s+|por\s+|era\s+)?(.+)", t)
-    if m:
-        args.id, args.texto = m.group(3), [m.group(4)]
-        return cmd_corregir(args)
     # "G12 nueva Regalos [fijo]" crea la categoría y la asigna; "nueva Regalos: descripción" solo la crea.
-    m = re.fullmatch(r"(?:([GTC]\d{1,5})\s+)?(?:nueva|crear)\s+(?:categor[ií]a\s+)?([^:]{1,40}?)(?:\s*:\s*(.{1,150}))?"
+    m = re.fullmatch(r"(?:([GTCM]\d{1,5})\s+)?(?:nueva|crear)\s+(?:categor[ií]a\s+)?([^:]{1,40}?)(?:\s*:\s*(.{1,150}))?"
                      r"(\s+(?:fijo|permanente|siempre|solo))?", texto, flags=re.I)
     if m:
         st, sh = State(), Sheet()
@@ -809,14 +846,15 @@ def cmd_responder(args):
         print(AYUDA)
         return
     st, sh = State(), Sheet()
-    m = re.search(r"\b([GTC]\d{1,5})\b", texto.upper())
+    m = re.search(r"\b([GTCM]\d{1,5})\b", texto.upper())
     gid = m.group(1) if m else (st.d.get("ultima_pregunta") or next(iter(st.d["pendientes"]), None))
     if not gid:
         print("No tengo preguntas de gastos pendientes.")
         return
     p = st.d["pendientes"].get(gid, {})
+    texto, nota = separar_nota(texto)
     # Sin ID explícito el mensaje puede ser cualquier cosa: no dejar que el LLM adivine una categoría.
-    limpio = re.sub(MODOS, "", re.sub(r"\b[GTC]\d{1,5}\b", "", texto, flags=re.I), flags=re.I)
+    limpio = re.sub(MODOS, "", re.sub(r"\b[GTCM]\d{1,5}\b", "", texto, flags=re.I), flags=re.I)
     cat = interpretar(limpio, p.get("opciones"), usar_llm=bool(m))
     if not cat and not limpio.strip() and p.get("opciones") and modo_de(texto) != "solo":
         cat = p["opciones"][0]  # "G12 permanente": la sugerida, como regla
@@ -827,7 +865,7 @@ def cmd_responder(args):
         print(f"No entendí la categoría para {gid}. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría")
               + f"\nPara crear una nueva: {gid} nueva <nombre>")
         return
-    out = aplicar(sh, st, gid, cat, modo_de(texto))
+    out = aplicar(sh, st, gid, cat, modo_de(texto), nota=nota)
     resto = [g for g in st.d["pendientes"] if g != gid]
     if resto:
         q = st.d["pendientes"][resto[0]]
@@ -838,12 +876,131 @@ def cmd_responder(args):
 
 def cmd_corregir(args):
     st, sh = State(), Sheet()
-    texto = " ".join(args.texto)
+    texto, nota = separar_nota(" ".join(args.texto))
     cat = interpretar(re.sub(MODOS, "", texto, flags=re.I), None)
     if not cat:
         print("No entendí la categoría. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría"))
         return
-    print(aplicar(sh, st, args.id.upper(), cat, modo_de(texto)))
+    print(aplicar(sh, st, args.id.upper(), cat, modo_de(texto), nota=nota))
+
+
+# --- notas y gastos manuales ---------------------------------------------------------
+
+NOTA_SEP = r"\s+(?:nota|obs|observaci[oó]n)\s*:?\s+|\s*[:·]\s+|\s+[-–—]\s+"
+
+
+def separar_nota(texto):
+    """"G12 2 nota: almuerzo con Cata" / "G12 restaurante - con Cata" -> ("G12 2", "almuerzo con Cata")."""
+    m = re.search(NOTA_SEP, texto, flags=re.I)
+    if not m or not texto[m.end():].strip():
+        return texto, None
+    return texto[:m.start()].strip(), texto[m.end():].strip()[:200]
+
+
+def cmd_nota(args):
+    st, sh = State(), Sheet()
+    gid = args.id or st.d.get("ultima_pregunta")
+    if not gid:
+        print("¿A qué movimiento? Escribe por ejemplo \"G12 nota: almuerzo con Cata\".")
+        return
+    row, r = sh.find(gid.upper())
+    if not row:
+        print(f"No encontré {gid.upper()} en la planilla.")
+        return
+    nota = " ".join(args.texto).strip()[:200]
+    sh.update(f"Gastos!{COL_NOTA}{row}", [[nota]])
+    r = r + [""] * (len(GASTOS_COLS) - len(r))
+    print(f'✓ {gid.upper()} ({clp(num(r[3]))} · {r[5]}) · nota: "{nota}"')
+
+
+GASTO_MANUAL = (r"(?:gasto|gast[eé]|pagu[eé]|compr[eé]|manual|registra(?:r)?(?:\s+un)?\s+gasto|agrega(?:r)?(?:\s+un)?\s+gasto)"
+                r"\s+(?:de\s+)?\$?\s*(\d[\d.,]*)\s*(lucas?|k|mil|clp|pesos)?\b\s*(.*)")
+CUENTAS_MANUAL = [(r"\b(efectivo|cash)\b", "efectivo"),
+                  (r"\b(santander|tc|cr[eé]dito|tarjeta de cr[eé]dito)\b", "TC Santander"),
+                  (r"\b(d[eé]bito|bci)\b", "")]
+PALABRAS_MANUAL = r"\b(antes de ayer|anteayer|antier|ayer|hoy|efectivo|cash|santander|tc|cr[eé]dito|tarjeta de cr[eé]dito|d[eé]bito|bci)\b"
+
+
+def parse_gasto_manual(texto, hoy):
+    """"gasto 25.000 en el bar - con los cabros, ayer, efectivo" -> dict(monto, fecha, hora, contraparte, nota, cuenta)."""
+    m = re.fullmatch(GASTO_MANUAL, texto.strip(), flags=re.I | re.S)
+    if not m:
+        return None
+    mult = 1000 if (m.group(2) or "").lower() in ("lucas", "luca", "k", "mil") else 1
+    dec = re.fullmatch(r"(\d+)[.,](\d{1,2})", m.group(1))  # "1,5 lucas" = 1.500; "25.000" sigue por num()
+    monto = round(float(f"{dec.group(1)}.{dec.group(2)}") * mult) if mult > 1 and dec else num(m.group(1)) * mult
+    resto = m.group(3).strip()
+    low = norm(resto).lower()
+    fecha, hora = hoy, ahora_chile().strftime("%H:%M")
+    if re.search(r"\b(antes de ayer|anteayer|antier)\b", low):
+        fecha, hora = hoy - dt.timedelta(days=2), ""
+    elif re.search(r"\bayer\b", low):
+        fecha, hora = hoy - dt.timedelta(days=1), ""
+    md = re.search(r"\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}))?\b", low)
+    if md:
+        try:
+            f = dt.date(int(md.group(3) or hoy.year), int(md.group(2)), int(md.group(1)))
+            if f > hoy and not md.group(3):
+                f = f.replace(year=hoy.year - 1)
+            fecha, hora = f, ""
+        except ValueError:
+            pass
+    cuenta = next((c for rx, c in CUENTAS_MANUAL if re.search(rx, low)), "")
+    limpio = re.sub(PALABRAS_MANUAL, " ", resto, flags=re.I)
+    limpio = re.sub(r"\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{4})?\b", " ", limpio)
+    limpio = re.sub(r"^\s*(en|de)\s+(el|la|los|las|un|una)?\s*", "", limpio, flags=re.I)
+    limpio = " ".join(limpio.replace(" ,", ",").split()).strip(" ,.;")
+    contraparte, nota = separar_nota(limpio)
+    if not contraparte and nota:
+        contraparte, nota = nota, None
+    contraparte = re.sub(r"(^|\s+)(el|la|los|las|en|de|con|por|a|un|una)$", "", contraparte, flags=re.I).strip()
+    contraparte = contraparte[:1].upper() + contraparte[1:60]
+    return {"monto": monto, "fecha": fecha.strftime("%d/%m/%Y"), "hora": hora, "contraparte": contraparte,
+            "nota": nota, "cuenta": cuenta}
+
+
+def cmd_gasto(args):
+    """Gasto sin correo del banco (o en efectivo): "gasto 25000 almuerzo - con Cata [ayer] [efectivo]".
+    Si el texto trae la categoría se registra confirmado; si no, se pregunta como cualquier otro."""
+    st, sh = State(), Sheet()
+    texto = " ".join(args.texto).strip()
+    g = parse_gasto_manual(texto, ahora_chile().date())
+    if not g or not g["monto"]:
+        print("No entendí el gasto. Escribe por ejemplo \"gasto 25000 almuerzo - con Cata\" "
+              "(opcional: \"ayer\", \"30/10\", \"efectivo\", \"santander\").")
+        return
+    if not g["contraparte"]:
+        print("¿En qué fue el gasto? Escribe por ejemplo \"gasto 25000 estacionamiento\".")
+        return
+    cat = interpretar(g["contraparte"], None, usar_llm=False)
+    item = {"tipo": "manual", "contraparte": g["contraparte"], "monto": g["monto"], "fecha": g["fecha"],
+            "hora": g["hora"], "mensaje": g["nota"] or ""}
+    gid = sh.ids()("M")
+    if cat:
+        estado, texto_cat = "confirmado", cat
+    else:
+        texto_cat, _ = sugerir(item)
+        estado = "pendiente"
+    # efectivo y otras tarjetas no pasan por la cartola BCI: no se concilian
+    conciliado = "n/a" if g["cuenta"] else ""
+    sh.append("Gastos", [[gid, g["fecha"], g["hora"], g["monto"], "Manual", g["contraparte"], texto_cat, "", "",
+                          g["cuenta"], estado, "manual", conciliado, f"manual:{now()}", now(), g["nota"] or ""]])
+    formatos("Gastos")
+    donde = f", {g['cuenta']}" if g["cuenta"] else ""
+    nota = f' · nota: "{g["nota"]}"' if g["nota"] else ""
+    if cat:
+        st.d["ultima_pregunta"] = gid
+        st.save()
+        print(f"✓ {gid}: {clp(g['monto'])} {g['contraparte']} → {cat} ({g['fecha'][:5]}{donde}){nota}\n"
+              f"Si la categoría no es esa: \"corregir {gid} <categoría>\".")
+        return
+    txt, ops = pregunta(gid, item, texto_cat)
+    st.d["pendientes"][gid] = {"opciones": ops, "sugerida": texto_cat, "contraparte": g["contraparte"], "tipo": "Manual",
+                               "clave": g["contraparte"], "preguntado": now(), "monto": g["monto"], "fecha": g["fecha"],
+                               "tambien": []}
+    st.d["ultima_pregunta"] = gid
+    st.save()
+    print(f"✓ {gid} registrado{donde.lstrip(', ') and f' ({donde[2:]})'}{nota}\n" + txt)
 
 
 def cmd_regla(args):
@@ -905,7 +1062,7 @@ def cmd_export(_args):
             continue
         movs.append({"id": r[0], "fecha": iso(r[1]), "hora": r[2], "monto": num(r[3]), "tipo": r[4],
                      "contraparte": r[5], "categoria": r[6], "fijo": r[7] == "sí", "detalle": r[8],
-                     "cuenta": r[9], "estado": r[10], "fuente": r[11], "conciliado": r[12],
+                     "cuenta": r[9], "estado": r[10], "fuente": r[11], "conciliado": r[12], "nota": r[15],
                      "suma_al_gasto": r[4] != "Ingreso" and r[6] not in NO_GASTO})
     cartolas = [dict(zip(["desde", "hasta", "cargos", "abonos", "cuadra", "movimientos", "agregados", "procesado"],
                          r + [""] * 8)) for r in sh.rows("Cartolas", len(CARTOLAS_COLS))[1:] if r]
@@ -976,7 +1133,8 @@ def resumen_texto(sh, desde, hasta):
         for r in sorted(gastos, key=_momento):
             extra = " (fijo)" if r[7] == "sí" else ""
             extra += {"pendiente": " · ⏳ por confirmar", "revisar": " · ⏳ revisar en la planilla"}.get(r[10], "")
-            lines.append(f"• {r[0]} · {clp(num(r[3]))} · {r[5]} · {r[6]}{extra}")
+            nota = f' · "{r[15]}"' if r[15] else ""
+            lines.append(f"• {r[0]} · {clp(num(r[3]))} · {r[5]} · {r[6]}{extra}{nota}")
     else:
         lines.append("Sin gastos registrados.")
     if otros:
@@ -1143,7 +1301,7 @@ def cmd_cartola(args):
             except ValueError:
                 continue
             # ±3 días en ambos bordes: el banco contabiliza la compra uno o más días después
-            if r[11] == "correo" and not r[12] and d0 - dt.timedelta(days=3) <= f <= d1 + dt.timedelta(days=3):
+            if r[11] in ("correo", "manual") and not r[12] and d0 - dt.timedelta(days=3) <= f <= d1 + dt.timedelta(days=3):
                 filas.append({"row": i, "fecha": f, "monto": num(r[3]),
                               "tipo": r[4], "usada": False})
         reglas = sh.reglas()
@@ -1158,7 +1316,7 @@ def cmd_cartola(args):
                 es_trf = bool(re.match(r"TRANSFER A|TRASPASO DE FONDOS A TERCERO", desc))
                 cand = [x for x in filas if not x["usada"] and x["monto"] == mv["monto"]
                         and abs((x["fecha"] - f).days) <= 3
-                        and (x["tipo"] == "Transferencia") == es_trf]
+                        and (x["tipo"] == "Manual" or (x["tipo"] == "Transferencia") == es_trf)]
                 if cand:
                     best = min(cand, key=lambda x: abs((x["fecha"] - f).days))
                     best["usada"] = True
@@ -1250,6 +1408,11 @@ def main():
     k = sub.add_parser("corregir")
     k.add_argument("id")
     k.add_argument("texto", nargs="+")
+    ga = sub.add_parser("gasto")
+    ga.add_argument("texto", nargs="+")
+    no = sub.add_parser("nota")
+    no.add_argument("id")
+    no.add_argument("texto", nargs="+")
     p = sub.add_parser("pendientes")
     p.add_argument("--recordatorio", action="store_true")
     m = sub.add_parser("resumen")
@@ -1283,7 +1446,8 @@ def main():
     if a.cmd != "init":
         configurar_categorias(Sheet())
     {"init": cmd_init, "sync": cmd_sync, "cartola": cmd_cartola, "responder": cmd_responder,
-     "corregir": cmd_corregir, "pendientes": cmd_pendientes, "resumen": cmd_resumen, "regla": cmd_regla,
+     "corregir": cmd_corregir, "gasto": cmd_gasto, "nota": cmd_nota,
+     "pendientes": cmd_pendientes, "resumen": cmd_resumen, "regla": cmd_regla,
      "categoria": cmd_categoria, "reaplicar": cmd_reaplicar, "export": cmd_export}[a.cmd](a)
 
 
