@@ -804,16 +804,7 @@ def cmd_responder(args):
     t = norm(texto).lower()
     # En el grupo de gastos todo mensaje llega aquí: el CLI decide, no el modelo.
     tiene_id = bool(re.search(r"\b[gtcm]\d{1,5}\b", t))
-    if not tiene_id and re.search(r"pendiente|\bfalta|\blista\b|\blistar\b|por confirmar|sin confirmar", t):
-        args.recordatorio = False
-        return cmd_pendientes(args)
-    if not tiene_id and re.search(r"\bresumen\b|\bhoy\b|cuanto (llevo|gaste)", t):
-        args.fecha = None
-        return cmd_resumen(args)
-    m = re.fullmatch(r"(corregir|cambiar|corrige|cambia)\s+(el\s+)?([gtcm]\d{1,5})\s+(?:a\s+|por\s+|era\s+)?(.+)", t)
-    if m:
-        args.id, args.texto = m.group(3), [m.group(4)]
-        return cmd_corregir(args)
+    # Primero lo que lleva texto libre (una nota o un gasto manual pueden decir "hoy", "lista", etc.).
     # "G12 nota: almuerzo con Cata" / "nota G12 almuerzo" / "nota almuerzo" (al último preguntado)
     m = re.fullmatch(r"(?:([GTCM]\d{1,5})\s+)?(?:nota|obs|observaci[oó]n)\s*:?\s+(?:([GTCM]\d{1,5})\s*:?\s+)?(.+)",
                      texto, flags=re.I | re.S)
@@ -823,6 +814,18 @@ def cmd_responder(args):
     if not tiene_id and re.match(GASTO_MANUAL, t):
         args.texto = [texto]
         return cmd_gasto(args)
+    # corregir sobre el texto original: la nota conserva mayúsculas y acentos
+    m = re.fullmatch(r"(corregir|cambiar|corrige|cambia)\s+(el\s+)?([GTCM]\d{1,5})\s+(?:a\s+|por\s+|era\s+)?(.+)",
+                     texto, flags=re.I | re.S)
+    if m:
+        args.id, args.texto = m.group(3), [m.group(4)]
+        return cmd_corregir(args)
+    if not tiene_id and re.search(r"pendiente|\bfalta|\blista\b|\blistar\b|por confirmar|sin confirmar", t):
+        args.recordatorio = False
+        return cmd_pendientes(args)
+    if not tiene_id and re.search(r"\bresumen\b|\bhoy\b|cuanto (llevo|gaste)", t):
+        args.fecha = None
+        return cmd_resumen(args)
     # "G12 nueva Regalos [fijo]" crea la categoría y la asigna; "nueva Regalos: descripción" solo la crea.
     m = re.fullmatch(r"(?:([GTCM]\d{1,5})\s+)?(?:nueva|crear)\s+(?:categor[ií]a\s+)?([^:]{1,40}?)(?:\s*:\s*(.{1,150}))?"
                      r"(\s+(?:fijo|permanente|siempre|solo))?", texto, flags=re.I)
@@ -923,9 +926,9 @@ def parse_gasto_manual(texto, hoy):
     m = re.fullmatch(GASTO_MANUAL, texto.strip(), flags=re.I | re.S)
     if not m:
         return None
-    monto = num(m.group(1))
-    if (m.group(2) or "").lower() in ("lucas", "luca", "k", "mil"):
-        monto *= 1000
+    mult = 1000 if (m.group(2) or "").lower() in ("lucas", "luca", "k", "mil") else 1
+    dec = re.fullmatch(r"(\d+)[.,](\d{1,2})", m.group(1))  # "1,5 lucas" = 1.500; "25.000" sigue por num()
+    monto = round(float(f"{dec.group(1)}.{dec.group(2)}") * mult) if mult > 1 and dec else num(m.group(1)) * mult
     resto = m.group(3).strip()
     low = norm(resto).lower()
     fecha, hora = hoy, ahora_chile().strftime("%H:%M")
