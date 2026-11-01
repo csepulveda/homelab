@@ -263,10 +263,6 @@ spec:
               value: {{ .Values.ollama.primaryModel | quote }}
             - name: GASTOS_NUM_CTX
               value: {{ .Values.ollama.contextTokens | quote }}
-            - name: GASTOS_UMBRAL
-              value: {{ .Values.gastos.umbral | quote }}
-            - name: GASTOS_APRENDIZAJE_DIAS
-              value: {{ .Values.gastos.aprendizajeDias | quote }}
             - name: GASTOS_BACKFILL_MIN
               value: {{ .Values.gastos.backfillMin | quote }}
             {{- range list "GASTOS_ACCOUNT" "GASTOS_SHEET_ID" "GASTOS_OWN_NAMES" }}

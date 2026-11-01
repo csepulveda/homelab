@@ -3,11 +3,13 @@
 
 Subcomandos:
   init                         crea pestañas y encabezados en la planilla
-  sync [--dias N] [--backfill] lee correos nuevos, registra y pregunta lo dudoso
+  sync [--dias N] [--backfill] lee correos nuevos, los registra y pregunta la categoría
+                               (salvo reglas permanentes y traspasos propios)
   cartola [--dias N]           procesa cartolas: cuadra, concilia y agrega lo que falta
   responder <texto>            aplica la respuesta del usuario a una pregunta pendiente
   corregir <ID> <texto>        cambia la categoría de un movimiento ya registrado
   pendientes [--recordatorio]  lista lo que falta confirmar
+  resumen [--fecha AAAA-MM-DD] resumen del día (total, detalle y pendientes); cron de las 21:30
 
 La salida estándar se entrega tal cual por WhatsApp (cron announce / respuesta del agente).
 "NO_REPLY" = no enviar nada.
@@ -33,8 +35,6 @@ ACCOUNT = ENV("GASTOS_ACCOUNT", "")
 OLLAMA = ENV("GASTOS_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat"
 MODEL = ENV("GASTOS_MODEL", "gemma4:26b")
 NUM_CTX = int(ENV("GASTOS_NUM_CTX", "32768"))  # igual que OpenClaw: otro valor recarga el modelo
-UMBRAL = float(ENV("GASTOS_UMBRAL", "0.9"))
-APRENDIZAJE_DIAS = int(ENV("GASTOS_APRENDIZAJE_DIAS", "14"))
 # En backfill solo se pregunta por WhatsApp lo dudoso desde este monto; lo menor queda "revisar" en la planilla.
 BACKFILL_MIN = int(ENV("GASTOS_BACKFILL_MIN", "50000"))
 OWN_NAMES = [n.strip().lower() for n in ENV("GASTOS_OWN_NAMES", "").split(",") if n.strip()]
@@ -118,8 +118,10 @@ RELACIONADAS = {
     "Transporte": ["Combustible", "Otros"], "Salud": ["Cuidado personal", "Compras"],
 }
 
-# Reglas fijas: (regex sobre contraparte+mensaje normalizados, categoría). Ver benchmark.
-FIJAS = [
+# Sugerencias determinísticas: (regex sobre contraparte+mensaje normalizados, categoría). Ver benchmark.
+# Solo proponen la categoría de la pregunta; sin regla permanente se pregunta igual. La excepción es
+# "Pago tarjeta", que no es gasto y se registra sin preguntar.
+SUGERIDAS = [
     (r"\bKHIPU\b.*\bTARJETA\b|\bPAGO TARJETA\b|\bTARJETA LIDER\b|\bEECC\b", "Pago tarjeta"),
     (r"\b(ENEL|CGE|CHILQUINTA|ABASTIBLE|LIPIGAS|METROGAS|GASCO|AGUAS ANDINAS|ESSBIO|ESVAL)\b", "Servicios básicos"),
     (r"\b(AUTOPISTA|AUTOPASE|COSTANERA|VESPUCIO)\b|\bRUTA \d", "Transporte"),
@@ -211,10 +213,6 @@ class State:
             json.dump(self.d, f, ensure_ascii=False, indent=1)
         os.chmod(tmp, 0o600)
         os.replace(tmp, self.path)
-
-    @property
-    def aprendiendo(self):
-        return (dt.date.today() - dt.date.fromisoformat(self.d["inicio"])).days < APRENDIZAJE_DIAS
 
 
 # --- planilla ------------------------------------------------------------------
@@ -346,9 +344,9 @@ def es_propio(item):
     return any(o and all(w in n for w in norm(o).lower().split()) for o in OWN_NAMES)
 
 
-def regla_fija(texto):
+def sugerencia_fija(texto):
     t = norm(texto)
-    for rx, cat in FIJAS:
+    for rx, cat in SUGERIDAS:
         if re.search(rx, t):
             return cat
     return None
@@ -408,20 +406,22 @@ def sugerir(item):
     return "Sin categoría", 0.0
 
 
-def categorizar(item, reglas, st, backfill=False):
-    """-> (categoria, fijo, preguntar, motivo)."""
-    r = buscar_regla(reglas, tipo_regla(item), clave(item), f"{item['contraparte']} {item.get('mensaje') or ''}")
+def categorizar(item, reglas):
+    """-> (categoria, fijo, preguntar, motivo). Sin regla permanente se pregunta siempre: el usuario
+    decide por WhatsApp si la respuesta es solo para ese movimiento o queda como regla."""
+    texto = f"{item['contraparte']} {item.get('mensaje') or ''}"
+    r = buscar_regla(reglas, tipo_regla(item), clave(item), texto)
     if r:
         return r["cat"], r["fijo"], r["preguntar"], "regla"
     if item["tipo"] == "transferencia" and es_propio(item):
         return "Traspaso propio", False, False, "propio"
-    fija = regla_fija(f"{item['contraparte']} {item.get('mensaje') or ''}")
-    if fija and not re.search(PASARELAS, norm(item["contraparte"])) or fija == "Pago tarjeta":
+    fija = sugerencia_fija(texto)
+    if fija == "Pago tarjeta":  # no es gasto: se registra sin preguntar
         return fija, False, False, "fija"
+    if fija and not re.search(PASARELAS, norm(item["contraparte"])):
+        return fija, False, True, "sugerida"
     cat, conf = sugerir(item)
-    preguntar = (conf < UMBRAL or (st.aprendiendo and not backfill) or item["tipo"] == "transferencia"
-                 or bool(re.search(PASARELAS, norm(item["contraparte"]))))
-    return cat, False, preguntar, f"modelo {conf:.2f}"
+    return cat, False, True, f"modelo {conf:.2f}"
 
 
 NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
@@ -454,7 +454,10 @@ def pregunta(gid, item, cat):
         head = f"🤔 {gid}: {clp(item['monto'])} en {item['contraparte']} ({item['fecha']}{hora})"
     else:
         head = f"🤔 {gid}: cargo {clp(item['monto'])} '{item['contraparte']}' ({item['fecha']})"
-    return head + f"\n{opciones_txt(ops)}\nResponde el número, otra categoría, o agrega \"fijo\" si es mensual.", ops
+    quien = "este destinatario" if item["tipo"] == "transferencia" else "este comercio"
+    return head + (f"\n{opciones_txt(ops)}\nResponde \"{gid} 2\" o \"{gid} restaurante\" (solo este). "
+                   f"Agrega \"permanente\" para no volver a preguntar por {quien}, "
+                   f"o \"fijo\" si además es un gasto fijo mensual."), ops
 
 
 # --- sync de correos -------------------------------------------------------------
@@ -516,7 +519,7 @@ def servipag(sh, st, p, reglas, nxt, rows, servipag_hoy, args):
     empresas = list(dict.fromkeys(x["empresa"] for x in p["cuentas"]))
     item = {"tipo": "servipag", "contraparte": principal["empresa"], "monto": p["monto"], "fecha": p["fecha"],
             "hora": p.get("hora"), "mensaje": ", ".join(empresas)}
-    cat, fijo, preguntar, motivo = categorizar(item, reglas, st, backfill=args.backfill)
+    cat, fijo, preguntar, _ = categorizar(item, reglas)
     detalle = f"Servipag: {', '.join(empresas)}"[:180] + f" [servipag:{p['consulta']}]"
     # 1) fila existente: transferencia a Servipag (forma "BCI Transferencia") o cartola genérica
     for i, r in enumerate(sh.gastos()[1:], start=2):
@@ -592,8 +595,8 @@ def cmd_sync(args):
         gid = nxt("T" if p["tipo"] == "transferencia" else "G")
         k = (tipo_regla(p), norm(clave(p)))
         if k not in cache:
-            cache[k] = categorizar(p, reglas, st, backfill=args.backfill)
-        cat, fijo, preguntar, motivo = cache[k]
+            cache[k] = categorizar(p, reglas)
+        cat, fijo, preguntar, _ = cache[k]
         if preguntar and args.backfill and p["monto"] < BACKFILL_MIN and norm(clave(p)) not in pend_clave:
             rows.append(fila(gid, p, cat, fijo, "revisar", "correo", origen))
             nuevos += 1
@@ -613,8 +616,6 @@ def cmd_sync(args):
             if not args.backfill:
                 st.d["ultima_pregunta"] = gid
                 msgs.append(txt)
-        elif not args.backfill and motivo.startswith("modelo"):
-            msgs.append(f"✓ {gid}: {clp(p['monto'])} {p['contraparte']} → {cat}")
     for i in range(0, len(rows), 100):
         sh.append("Gastos", rows[i:i + 100])
     if rows:
@@ -673,12 +674,27 @@ def interpretar(texto, opciones, usar_llm=True):
     return c if c in ALL_CATS and c != "Sin categoría" and conf >= 0.7 else None
 
 
-def aplicar(sh, st, gid, cat, fijo, quien="usuario"):
+MODOS = r"\b(permanente|siempre|fijo|solo)\b"
+
+
+def modo_de(texto):
+    """"solo" (por defecto): categoriza este movimiento y se vuelve a preguntar por la contraparte.
+    "permanente": además guarda la regla. "fijo": permanente y gasto fijo mensual."""
+    t = norm(texto).lower()
+    if re.search(r"\bfijo\b", t):
+        return "fijo"
+    if re.search(r"\b(permanente|siempre)\b", t):
+        return "permanente"
+    return "solo"
+
+
+def aplicar(sh, st, gid, cat, modo="solo", quien="usuario"):
     row, r = sh.find(gid)
     if not row:
         return f"No encontré {gid} en la planilla."
     p = st.d["pendientes"].pop(gid, None) or {}
     r = r + [""] * (len(GASTOS_COLS) - len(r))
+    fijo = modo == "fijo"
     for g in [gid] + p.get("tambien", []):
         rw, rr = sh.find(g)
         if rw:
@@ -687,14 +703,18 @@ def aplicar(sh, st, gid, cat, fijo, quien="usuario"):
             sh.update(f"Gastos!K{rw}", [["confirmado"]])
     tipo = p.get("tipo") or {"T": "Transferencia", "C": "Cartola"}.get(gid[0], "Compra")
     cl = p.get("clave") or r[5]
-    msg = f"✓ {gid} → {cat}" + (" (fijo)" if fijo else "")
+    msg = f"✓ {gid} → {cat}" + (" (fijo mensual)" if fijo else "")
     if p.get("tambien"):
         msg += f" (y {len(p['tambien'])} movimientos más de {p['contraparte']})"
-    if cl and not re.search(GENERICOS, norm(cl)):
+    if modo == "solo":
+        msg += " · solo este"
+    elif cl and not re.search(GENERICOS, norm(cl)):
         sh.set_regla(tipo, cl, cat, fijo, quien)
-        msg += f". Regla guardada para \"{cl.split('|')[0]}\""
+        msg += f". Regla permanente para \"{cl.split('|')[0]}\""
         n = reaplicar(sh, st)
         msg += f" (+{n} movimientos más actualizados)." if n else "."
+    else:
+        msg += ". La descripción es genérica: no guardo regla."
     if st.d.get("ultima_pregunta") == gid:
         st.d["ultima_pregunta"] = None
     st.save()
@@ -708,8 +728,11 @@ def argparse_ns(**kw):
 
 AYUDA = ("Soy el registro de gastos 💰. Puedes escribir:\n"
          "• \"pendientes\": lo que falta confirmar\n"
-         "• \"G12 1\", \"T3 arriendo fijo\", \"G15 farmacia\": responder una pregunta\n"
-         "• \"corregir G5 supermercado\": cambiar uno ya registrado\n"
+         "• \"G12 1\" o \"G15 farmacia\": responder una pregunta (solo ese movimiento)\n"
+         "• \"G12 restaurante permanente\": no vuelvo a preguntar por ese comercio\n"
+         "• \"T3 arriendo fijo\": permanente y además gasto fijo mensual\n"
+         "• \"corregir G5 supermercado [permanente|fijo]\": cambiar uno ya registrado\n"
+         "• \"resumen\": total y detalle de hoy (también llega solo a las 21:30)\n"
          "• \"regla taller = Transporte\": todo lo que diga \"taller\" va a esa categoría (también lo pasado)\n"
          "• \"G12 nueva Regalos\": crea la categoría Regalos y le asigna G12 (\"nueva Regalos: descripción\" solo la crea)")
 
@@ -739,20 +762,23 @@ def cmd_responder(args):
     if not tiene_id and re.search(r"pendiente|\bfalta|\blista\b|\blistar\b|por confirmar|sin confirmar", t):
         args.recordatorio = False
         return cmd_pendientes(args)
+    if not tiene_id and re.search(r"\bresumen\b|\bhoy\b|cuanto (llevo|gaste)", t):
+        args.fecha = None
+        return cmd_resumen(args)
     m = re.fullmatch(r"(corregir|cambiar|corrige|cambia)\s+(el\s+)?([gtc]\d{1,5})\s+(?:a\s+|por\s+|era\s+)?(.+)", t)
     if m:
         args.id, args.texto = m.group(3), [m.group(4)]
         return cmd_corregir(args)
     # "G12 nueva Regalos [fijo]" crea la categoría y la asigna; "nueva Regalos: descripción" solo la crea.
-    m = re.fullmatch(r"(?:([GTC]\d{1,5})\s+)?(?:nueva|crear)\s+(?:categor[ií]a\s+)?([^:]{1,40}?)(?:\s*:\s*(.{1,150}))?(\s+fijo)?",
-                     texto, flags=re.I)
+    m = re.fullmatch(r"(?:([GTC]\d{1,5})\s+)?(?:nueva|crear)\s+(?:categor[ií]a\s+)?([^:]{1,40}?)(?:\s*:\s*(.{1,150}))?"
+                     r"(\s+(?:fijo|permanente|siempre|solo))?", texto, flags=re.I)
     if m:
         st, sh = State(), Sheet()
         nombre, creada = crear_categoria(sh, m.group(2).strip(" \"'"), (m.group(3) or "").strip())
         out = f"✓ Categoría \"{nombre}\" " + ("creada" if creada else "ya existía")
         gid = m.group(1).upper() if m.group(1) else (None if m.group(3) else st.d.get("ultima_pregunta"))
         if gid:
-            out += "\n" + aplicar(sh, st, gid, nombre, bool(m.group(4)))
+            out += "\n" + aplicar(sh, st, gid, nombre, modo_de(m.group(4) or ""))
         print(out)
         return
     m = re.fullmatch(r"regla\s+(.+?)\s*(?:=|->|→|:)\s*(.+?)(\s+fijo)?", texto, flags=re.I)
@@ -770,7 +796,10 @@ def cmd_responder(args):
         return
     p = st.d["pendientes"].get(gid, {})
     # Sin ID explícito el mensaje puede ser cualquier cosa: no dejar que el LLM adivine una categoría.
-    cat = interpretar(re.sub(r"\b[GTC]\d{1,5}\b", "", texto, flags=re.I), p.get("opciones"), usar_llm=bool(m))
+    limpio = re.sub(MODOS, "", re.sub(r"\b[GTC]\d{1,5}\b", "", texto, flags=re.I), flags=re.I)
+    cat = interpretar(limpio, p.get("opciones"), usar_llm=bool(m))
+    if not cat and not limpio.strip() and p.get("opciones") and modo_de(texto) != "solo":
+        cat = p["opciones"][0]  # "G12 permanente": la sugerida, como regla
     if not cat and not m:
         print(f"No entendí 🤔 ({len(st.d['pendientes'])} gastos por confirmar).\n" + AYUDA)
         return
@@ -778,8 +807,7 @@ def cmd_responder(args):
         print(f"No entendí la categoría para {gid}. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría")
               + f"\nPara crear una nueva: {gid} nueva <nombre>")
         return
-    fijo = bool(re.search(r"\bfijo\b", norm(texto).lower()))
-    out = aplicar(sh, st, gid, cat, fijo)
+    out = aplicar(sh, st, gid, cat, modo_de(texto))
     resto = [g for g in st.d["pendientes"] if g != gid]
     if resto:
         out += f"\nQuedan {len(resto)} pendientes" + (f"; siguiente: {resto[0]}" if len(resto) else "")
@@ -788,11 +816,12 @@ def cmd_responder(args):
 
 def cmd_corregir(args):
     st, sh = State(), Sheet()
-    cat = interpretar(" ".join(args.texto), None)
+    texto = " ".join(args.texto)
+    cat = interpretar(re.sub(MODOS, "", texto, flags=re.I), None)
     if not cat:
         print("No entendí la categoría. Opciones: " + ", ".join(c for c in ALL_CATS if c != "Sin categoría"))
         return
-    print(aplicar(sh, st, args.id.upper(), cat, bool(re.search(r"\bfijo\b", " ".join(args.texto).lower()))))
+    print(aplicar(sh, st, args.id.upper(), cat, modo_de(texto)))
 
 
 def cmd_regla(args):
@@ -875,11 +904,15 @@ def cmd_reaplicar(_args):
 
 def cmd_pendientes(args):
     st = State()
-    pend = list(st.d["pendientes"].items())
-    if not pend:
+    if not st.d["pendientes"]:
         print("NO_REPLY" if args.recordatorio else "No hay gastos pendientes de confirmar. ✨")
         return
-    lines = [f"📋 {len(pend)} gastos por confirmar" + (" (resumen del día)" if args.recordatorio else "") + ":"]
+    print(pendientes_texto(st, args.recordatorio))
+
+
+def pendientes_texto(st, recordatorio=False):
+    pend = list(st.d["pendientes"].items())
+    lines = [f"📋 {len(pend)} gastos por confirmar" + (" (resumen del día)" if recordatorio else "") + ":"]
     for gid, p in pend[:10]:
         mas = f" (+{len(p['tambien'])} más)" if p.get("tambien") else ""
         ops = p.get("opciones") or []
@@ -888,10 +921,46 @@ def cmd_pendientes(args):
                      + opciones_txt(ops))
     if len(pend) > 10:
         lines.append(f"…y {len(pend) - 10} más.")
-    lines.append("Responde uno por mensaje, por ejemplo: G1 2 · T1 préstamo · T3 arriendo fijo")
+    lines.append("Responde uno por mensaje: \"G1 2\" o \"T1 préstamo\" (solo ese), "
+                 "\"G5 restaurante permanente\" (no vuelvo a preguntar), \"T3 arriendo fijo\" (permanente y fijo mensual)")
     st.d["ultima_pregunta"] = pend[0][0]
     st.save()
-    print("\n".join(lines))
+    return "\n".join(lines)
+
+
+def resumen_texto(sh, fecha):
+    """Gastos registrados con esa fecha: total, cantidad y detalle. Lo que no suma al gasto va aparte."""
+    gastos, otros = [], []
+    for r in sh.gastos()[1:]:
+        r = r + [""] * (len(GASTOS_COLS) - len(r))
+        try:
+            if not r[0] or _fecha(r[1]) != fecha:
+                continue
+        except ValueError:
+            continue
+        (otros if r[4] == "Ingreso" or r[6] in NO_GASTO else gastos).append(r)
+    lines = [f"📒 Resumen {fecha.strftime('%d/%m/%Y')}"]
+    if gastos:
+        lines += [f"TOTAL: {clp(sum(num(r[3]) for r in gastos))}", f"Número de gastos: {len(gastos)}", "Detalles:"]
+        for r in sorted(gastos, key=lambda x: (x[2], x[0])):
+            extra = " (fijo)" if r[7] == "sí" else ""
+            extra += {"pendiente": " · ⏳ por confirmar", "revisar": " · ⏳ revisar en la planilla"}.get(r[10], "")
+            lines.append(f"• {r[0]} · {clp(num(r[3]))} · {r[5]} · {r[6]}{extra}")
+    else:
+        lines.append("Sin gastos registrados.")
+    if otros:
+        lines.append("No suman al gasto: " + " · ".join(f"{r[0]} {clp(num(r[3]))} {r[6]}" for r in otros))
+    return "\n".join(lines)
+
+
+def cmd_resumen(args):
+    """Resumen del día para el cron de las 21:30: siempre se envía, con los pendientes al final."""
+    st, sh = State(), Sheet()
+    fecha = dt.date.fromisoformat(args.fecha) if args.fecha else dt.datetime.now(TZ).date()
+    out = resumen_texto(sh, fecha)
+    if st.d["pendientes"]:
+        out += "\n\n" + pendientes_texto(st, recordatorio=True)
+    print(out)
 
 
 # --- cartola -----------------------------------------------------------------------
@@ -958,11 +1027,11 @@ def reaplicar(sh, st):
     for i, r in enumerate(sh.gastos()[1:], start=2):
         r = r + [""] * (len(GASTOS_COLS) - len(r))
         rg = regla_fila(reglas, r)
-        if not rg or rg["preguntar"]:
-            continue
+        if not rg or rg["preguntar"] or r[10] == "confirmado":
+            continue  # lo que el usuario confirmó a mano ("solo este") no se pisa
         fijo = "sí" if rg["fijo"] else r[7]
         # la regla la definió el usuario: lo dudoso queda confirmado; lo automático sigue "auto"
-        estado = "confirmado" if r[10] in ("pendiente", "revisar", "confirmado") else (r[10] or "auto")
+        estado = "confirmado" if r[10] in ("pendiente", "revisar") else (r[10] or "auto")
         if [r[6], r[7], r[10]] != [rg["cat"], fijo, estado]:
             data.append({"range": f"Gastos!G{i}:H{i}", "values": [[rg["cat"], fijo]]})
             data.append({"range": f"Gastos!K{i}", "values": [[estado]]})
@@ -1062,8 +1131,9 @@ def cmd_cartola(args):
                 elif r:
                     cat, preguntar = r["cat"], r["preguntar"]
                 else:
-                    cat = regla_fija(desc) or sugerir(item)[0]
-                    preguntar = not regla_fija(desc)
+                    fija = sugerencia_fija(desc)
+                    cat = fija or sugerir(item)[0]
+                    preguntar = fija != "Pago tarjeta"  # sin regla permanente se pregunta siempre
             nuevas.append((item, mv, cat, preguntar))
         filas_out, n_preg, nxt = [], 0, sh.ids()
         pend_clave = {p["clave"]: g for g, p in st.d["pendientes"].items()}
@@ -1137,6 +1207,8 @@ def main():
     k.add_argument("texto", nargs="+")
     p = sub.add_parser("pendientes")
     p.add_argument("--recordatorio", action="store_true")
+    m = sub.add_parser("resumen")
+    m.add_argument("--fecha")
     g = sub.add_parser("regla")
     g.add_argument("texto")
     g.add_argument("categoria")
@@ -1166,7 +1238,7 @@ def main():
     if a.cmd != "init":
         configurar_categorias(Sheet())
     {"init": cmd_init, "sync": cmd_sync, "cartola": cmd_cartola, "responder": cmd_responder,
-     "corregir": cmd_corregir, "pendientes": cmd_pendientes, "regla": cmd_regla,
+     "corregir": cmd_corregir, "pendientes": cmd_pendientes, "resumen": cmd_resumen, "regla": cmd_regla,
      "categoria": cmd_categoria, "reaplicar": cmd_reaplicar, "export": cmd_export}[a.cmd](a)
 
 

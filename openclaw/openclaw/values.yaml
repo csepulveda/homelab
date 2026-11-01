@@ -64,9 +64,6 @@ whatsappGroups:
 # Los crons se crean una vez con el CLI (quedan en el PVC); ver files/gastos/README.md.
 gastos:
   enabled: true
-  # pregunta por WhatsApp si la confianza del modelo es menor a esto (benchmark 2026-10-31)
-  umbral: "0.9"
-  aprendizajeDias: "14"
   backfillMin: "50000"
   gog:
     url: https://github.com/steipete/gogcli/releases/download/v0.47.1/gogcli_0.47.1_linux_amd64.tar.gz
