@@ -81,11 +81,13 @@ function since(iso) {
   if (h < 48) return `hace ${h} h`;
   return `hace ${Math.floor(h / 24)} d`;
 }
+const looksLikeDuration = (s) => /^\d{1,4}\s*[a-z]{1,3}$/i.test(String(s || "").trim());
 function parseDuration(s) {
-  const m = /^(\d{1,4})\s*(m|min|h|hr|d|w|sem)$/i.exec(String(s || "").trim());
+  const m = /^(\d{1,4})\s*(min|m|hr|h|d|sem|w)$/i.exec(String(s || "").trim());
   if (!m) return null;
   const n = Number(m[1]);
-  const unit = m[2].toLowerCase()[0];
+  const raw = m[2].toLowerCase();
+  const unit = raw === "sem" ? "w" : raw[0];
   const ms = { m: 60e3, h: 3600e3, d: 86400e3, w: 7 * 86400e3 }[unit] * n;
   if (!ms || ms > MAX_SILENCE_MS) return null;
   return { ms, label: `${n}${unit}` };
@@ -168,21 +170,67 @@ async function createSilence(labels, dur, comment) {
   return { id: r?.silenceID || "", end };
 }
 
-// ---------- envío al grupo con el CLI (cola serial) ----------
+// ---------- envío al grupo con el CLI: spool en disco + cola serial con reintentos ----------
+// Cada notificación aceptada se escribe en STATE_DIR/pendientes/ ANTES de responder 202 a
+// Alertmanager (que no reintenta tras un 2xx). El archivo se borra solo cuando el CLI confirma el
+// envío; lo que quede pendiente (reinicio del pod, WhatsApp caído) se reenvía al arrancar.
+const SPOOL = path.join(STATE_DIR, "pendientes");
+const SEND_ATTEMPTS = 3;
+const SEND_RETRY_MS = 10_000;
 let queue = Promise.resolve();
-function sendToGroup(text, logger) {
-  const run = () => new Promise((resolve) => {
-    if (!GROUP) { logger?.warn?.("alertas-bridge: WA_GROUP_ALERTAS vacío; no envío"); return resolve(false); }
+let seq = 0;
+function spoolWrite(text) {
+  fs.mkdirSync(SPOOL, { recursive: true, mode: 0o700 });
+  const file = path.join(SPOOL, `${Date.now()}-${String(++seq).padStart(4, "0")}.txt`);
+  fs.writeFileSync(file + ".tmp", text, { mode: 0o600 });
+  fs.renameSync(file + ".tmp", file);
+  return file;
+}
+function cliSend(text, logger) {
+  return new Promise((resolve) => {
     execFile(CLI[0], [...CLI.slice(1), "message", "send", "--channel", "whatsapp", "--target", GROUP, "--message", text, "--json"],
       { timeout: 120_000, maxBuffer: 1 << 20, env: process.env, cwd: "/tmp" },
       (err, stdout, stderr) => {
         if (err) logger?.warn?.(`alertas-bridge: envío falló: ${err.message} ${String(stderr || "").slice(-300)}`);
-        else logger?.info?.("alertas-bridge: alerta enviada al grupo");
         resolve(!err);
       });
   });
+}
+async function deliverFile(file, logger) {
+  if (!GROUP) { logger?.warn?.("alertas-bridge: WA_GROUP_ALERTAS vacío; queda en pendientes"); return false; }
+  let text;
+  try { text = fs.readFileSync(file, "utf8"); } catch { return false; }
+  for (let i = 1; i <= SEND_ATTEMPTS; i++) {
+    if (await cliSend(text, logger)) {
+      fs.rmSync(file, { force: true });
+      logger?.info?.("alertas-bridge: alerta enviada al grupo");
+      return true;
+    }
+    if (i < SEND_ATTEMPTS) await new Promise((r) => setTimeout(r, SEND_RETRY_MS * i));
+  }
+  logger?.warn?.(`alertas-bridge: ${SEND_ATTEMPTS} intentos fallidos; ${path.basename(file)} queda en pendientes para el próximo arranque`);
+  return false;
+}
+const queued = new Set(); // archivos ya en cola: el replay del arranque no debe duplicarlos
+function enqueue(file, logger) {
+  if (queued.has(file)) return queue;
+  queued.add(file);
+  const run = () => deliverFile(file, logger).finally(() => queued.delete(file));
   queue = queue.then(run, run);
   return queue;
+}
+// Acepta el mensaje de forma durable; el envío sigue en la cola.
+function sendToGroup(text, logger) {
+  const file = spoolWrite(text);
+  void enqueue(file, logger);
+  return file;
+}
+function replaySpool(logger) {
+  let files = [];
+  try { files = fs.readdirSync(SPOOL).filter((f) => f.endsWith(".txt")).sort(); } catch { return 0; }
+  for (const f of files) void enqueue(path.join(SPOOL, f), logger);
+  if (files.length) logger?.info?.(`alertas-bridge: reenviando ${files.length} notificación(es) pendiente(s)`);
+  return files.length;
 }
 
 // ---------- formato de mensajes ----------
@@ -241,7 +289,8 @@ async function cmdSilenciar(args) {
   if (!args.length) return "Uso: *silenciar <N o nombre> [duración] [motivo]*. Ej: silenciar 2 4h mantención";
   const target = args[0];
   let dur = parseDuration(args[1]);
-  let rest = args.slice(dur ? 2 : 1);
+  if (!dur && looksLikeDuration(args[1])) return `No entiendo la duración "${args[1]}". Usa 30m, 2h, 1d o 1w (máximo 30d).`;
+  const rest = args.slice(dur ? 2 : 1);
   if (!dur) dur = parseDuration(DEFAULT_SILENCE);
   let labels;
   if (/^\d+$/.test(target)) {
@@ -292,6 +341,8 @@ export default {
   description: "Alertmanager -> WhatsApp y comandos de silencio, sin modelo.",
   register(api) {
     if (!TOKEN) api.logger?.warn?.("alertas-bridge: ALERTAS_WEBHOOK_TOKEN vacío; el webhook rechazará todo");
+    // Deja pasar unos segundos para que el gateway (y el canal de WhatsApp) termine de arrancar.
+    setTimeout(() => { try { replaySpool(api.logger); } catch (e) { api.logger?.warn?.(`alertas-bridge: replay falló: ${e?.message || e}`); } }, 20_000).unref?.();
     api.registerHttpRoute({
       path: ROUTE,
       auth: "plugin",
@@ -313,8 +364,13 @@ export default {
           return reply(res, 400, { error: "bad payload" });
         }
         if (!text) return reply(res, 200, { ok: true, sent: false });
-        // Responder ya: Alertmanager reintenta si no recibe 2xx y el envío por el CLI tarda ~20 s.
-        void sendToGroup(text, api.logger);
+        // Persistir antes de responder: Alertmanager no reintenta tras un 2xx y el CLI tarda ~20 s.
+        try {
+          sendToGroup(text, api.logger);
+        } catch (e) {
+          api.logger?.warn?.(`alertas-bridge: no pude guardar la notificación: ${e?.message || e}`);
+          return reply(res, 503, { error: "spool unavailable" }); // Alertmanager reintentará
+        }
         return reply(res, 202, { ok: true, queued: true });
       },
     });

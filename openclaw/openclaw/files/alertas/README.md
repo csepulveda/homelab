@@ -18,8 +18,10 @@ Todo es script, sin modelo. Corre dentro del pod de OpenClaw como plugin `alerta
 ## Qué llega
 
 Alertmanager (`monitoring/kube/values.yaml`) rutea `severity = critical` al receiver `whatsapp-homelab`,
-con `send_resolved: true`. Las warnings e info siguen en `null`. El webhook responde 202 de inmediato y
-el envío al grupo va por una cola serial (el CLI tarda ~20 s por mensaje).
+con `send_resolved: true`. Las warnings e info siguen en `null`. Cada notificación se guarda en
+`~/.openclaw/alertas/pendientes/` antes de responder 202 (Alertmanager no reintenta tras un 2xx); una cola
+serial la envía con el CLI (~20 s por mensaje, 3 intentos) y borra el archivo al confirmar. Lo pendiente se
+reenvía al arrancar el gateway.
 
 ## Secretos (fuera de git)
 
