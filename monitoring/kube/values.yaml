@@ -45,6 +45,11 @@ kube:
             matchers:
               - alertname = "NodeMemoryHighUtilization"
               - instance = "192.168.100.155:9100"
+          # Criticas al grupo de WhatsApp "Alertas Homelab" via el plugin alertas-bridge
+          # de OpenClaw (openclaw/openclaw/files/alertas/README.md). Warnings e info: null.
+          - receiver: whatsapp-homelab
+            matchers:
+              - severity = "critical"
       inhibit_rules:
         - source_matchers: [severity = "critical"]
           target_matchers: [severity =~ "warning|info"]
@@ -58,8 +63,22 @@ kube:
         - target_matchers: [alertname = "InfoInhibitor"]
       receivers:
         - name: "null"
+        - name: whatsapp-homelab
+          webhook_configs:
+            - url: http://openclaw.openclaw.svc.cluster.local:18789/alertas/alertmanager
+              send_resolved: true
+              max_alerts: 20
+              http_config:
+                authorization:
+                  type: Bearer
+                  # Secret monitoring/alertmanager-openclaw (clave token), montado por alertmanagerSpec.secrets
+                  credentials_file: /etc/alertmanager/secrets/alertmanager-openclaw/token
       templates:
         - /etc/alertmanager/config/*.tmpl
+    alertmanagerSpec:
+      # token del webhook de WhatsApp; se crea fuera de git (ver README de alertas)
+      secrets:
+        - alertmanager-openclaw
   prometheus:
     prometheusSpec:
       additionalScrapeConfigs:

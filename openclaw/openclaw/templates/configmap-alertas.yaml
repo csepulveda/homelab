@@ -1,0 +1,18 @@
+{{- if .Values.alertas.enabled }}
+# Plugin alertas-bridge (Alertmanager -> grupo de WhatsApp, comandos de silencio; sin modelo).
+# Se copia a la carpeta read-only de herramientas en un initContainer (ver deployment.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-alertas
+  namespace: openclaw
+data:
+  AGENTS-alertas.md: |-
+{{ .Files.Get "files/alertas/AGENTS-alertas.md" | indent 4 }}
+  bridge-package.json: |-
+{{ .Files.Get "files/alertas-bridge/package.json" | indent 4 }}
+  bridge-openclaw.plugin.json: |-
+{{ .Files.Get "files/alertas-bridge/openclaw.plugin.json" | indent 4 }}
+  bridge-index.js: |-
+{{ .Files.Get "files/alertas-bridge/index.js" | indent 4 }}
+{{- end }}

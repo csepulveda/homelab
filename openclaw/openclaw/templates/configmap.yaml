@@ -66,6 +66,17 @@ data:
             }
           }
           {{- end }}
+          {{- if .Values.alertas.enabled }},
+          "alertas": {
+            "workspace": "~/.openclaw/workspace-alertas",
+            "description": "Grupo de WhatsApp de alertas: lo atiende el plugin alertas-bridge",
+            "skills": [],
+            "tools": {
+              "allow": [],
+              "fs": { "workspaceOnly": true }
+            }
+          }
+          {{- end }}
         },
         "defaults": {
           "systemAgent": { "agentId": "main" },
@@ -80,14 +91,27 @@ data:
       "session": {
         "resetByType": {}
       },
-      {{- if .Values.gastos.enabled }}
+      {{- if or .Values.gastos.enabled .Values.alertas.enabled }}
       "plugins": {
-        "load": { "paths": ["/opt/gastos-tools/gastos-bridge"] },
+        "load": { "paths": [
+          {{- $paths := list }}
+          {{- if .Values.gastos.enabled }}{{ $paths = append $paths "/opt/gastos-tools/gastos-bridge" }}{{ end }}
+          {{- if .Values.alertas.enabled }}{{ $paths = append $paths "/opt/gastos-tools/alertas-bridge" }}{{ end }}
+          {{- range $i, $p := $paths }}{{ if $i }}, {{ end }}{{ $p | quote }}{{ end }}
+        ] },
         "entries": {
+          {{- if .Values.gastos.enabled }}
           "gastos-bridge": {
             "enabled": true,
             "hooks": { "timeouts": { "before_dispatch": 300000 } }
+          }{{ if .Values.alertas.enabled }},{{ end }}
+          {{- end }}
+          {{- if .Values.alertas.enabled }}
+          "alertas-bridge": {
+            "enabled": true,
+            "hooks": { "timeouts": { "before_dispatch": 30000 } }
           }
+          {{- end }}
         }
       },
       {{- end }}
