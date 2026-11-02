@@ -2,11 +2,11 @@ apiVersion: v2
 name: kube
 description: kube
 type: application
-version: 75.19.0
+version: 75.20.0
 appVersion: v0.81.0
 
 dependencies:
 - name: kube-prometheus-stack
-  version: 92.16.1
+  version: 92.17.0
   repository: "https://prometheus-community.github.io/helm-charts"
   alias: kube
