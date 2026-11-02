@@ -44,6 +44,7 @@ managedConfigPaths:
   # plugin gastos-bridge: cargado desde la carpeta read-only de herramientas
   - plugins.load
   - plugins.entries.gastos-bridge
+  - plugins.entries.alertas-bridge
 
 # Grupos de WhatsApp = contextos, cada uno con su agente. Claw SOLO admite estos grupos:
 # sync-config reescribe channels.whatsapp.groups (allowlist estricta, sin "*") y los
@@ -53,6 +54,9 @@ whatsappGroups:
   - name: Control Gastos
     agent: gastos
     secretKey: WA_GROUP_GASTOS
+  - name: Alertas Homelab
+    agent: alertas
+    secretKey: WA_GROUP_ALERTAS
 
 # Registro de gastos BCI (Gmail -> Google Sheets) con gog + modelo local.
 # Datos personales fuera de git, en el Secret existingSecret:
@@ -79,3 +83,14 @@ ingress:
   # CIDR de pods (cilium cluster-pool), desde donde llega ingress-nginx
   trustedProxies:
     - 10.42.0.0/16
+
+# Alertas de Alertmanager al grupo de WhatsApp "Alertas Homelab" y comandos de silencio
+# desde el grupo (plugin alertas-bridge, sin modelo). Ver files/alertas/README.md.
+# Secretos fuera de git (existingSecret):
+#   WA_GROUP_ALERTAS        JID del grupo
+#   ALERTAS_WEBHOOK_TOKEN   bearer que manda Alertmanager (el mismo va en el Secret
+#                           monitoring/alertmanager-openclaw, clave token)
+alertas:
+  enabled: true
+  alertmanagerUrl: http://kube-alertmanager.monitoring.svc:9093
+  webhookPath: /alertas/alertmanager

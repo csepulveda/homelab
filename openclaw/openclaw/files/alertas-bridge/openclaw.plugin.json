@@ -1,0 +1,8 @@
+{
+  "id": "alertas-bridge",
+  "name": "Alertas bridge",
+  "description": "Recibe los webhooks de Alertmanager y los publica en el grupo de WhatsApp de alertas; responde los comandos del grupo (alertas, silenciar, silencios, quitar) contra la API de Alertmanager, sin turno del modelo.",
+  "categories": ["other"],
+  "activation": { "onStartup": true },
+  "configSchema": { "type": "object", "additionalProperties": false }
+}

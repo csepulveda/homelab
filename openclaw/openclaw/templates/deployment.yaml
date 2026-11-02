@@ -21,6 +21,9 @@ spec:
         {{- if .Values.gastos.enabled }}
         checksum/gastos: {{ include (print $.Template.BasePath "/configmap-gastos.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.alertas.enabled }}
+        checksum/alertas: {{ include (print $.Template.BasePath "/configmap-alertas.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -81,6 +84,16 @@ spec:
               # la skill ya no vive en el agente main
               rm -rf /home/node/.openclaw/workspace/skills/gastos
               {{- end }}
+              {{- if .Values.alertas.enabled }}
+              # agente "alertas": el grupo lo responde el plugin alertas-bridge; esto es solo respaldo
+              W=/home/node/.openclaw/workspace-alertas
+              mkdir -p $W
+              cp /alertas/AGENTS-alertas.md $W/AGENTS.md
+              rm -f $W/BOOTSTRAP.md
+              printf "# SOUL.md\n\nCanal mecánico de alertas. Sin personalidad ni conversación. Sigue AGENTS.md.\n" > $W/SOUL.md
+              printf "# IDENTITY.md\n\n- Nombre: Alertas\n- Rol: responder solo con la lista de comandos.\n" > $W/IDENTITY.md
+              printf "# USER.md\n\nEl usuario recibe alertas del homelab y las silencia con comandos.\n" > $W/USER.md
+              {{- end }}
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -100,6 +113,10 @@ spec:
             {{- if .Values.gastos.enabled }}
             - name: gastos
               mountPath: /gastos
+            {{- end }}
+            {{- if .Values.alertas.enabled }}
+            - name: alertas
+              mountPath: /alertas
             {{- end }}
         # Seed de openclaw.json si no existe; si existe, solo sincroniza
         # .Values.managedConfigPaths desde el ConfigMap (ver sync-config.js).
@@ -207,6 +224,46 @@ spec:
             - name: gastos-tools
               mountPath: /tools
         {{- end }}
+        {{- if .Values.alertas.enabled }}
+        # Plugin alertas-bridge a la carpeta read-only de herramientas (código que corre
+        # dentro del gateway: el agente no debe poder modificarlo).
+        - name: alertas-tools
+          image: busybox:1.38
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              rm -rf /tools/alertas-bridge
+              mkdir -p /tools/alertas-bridge
+              cp /alertas/bridge-package.json /tools/alertas-bridge/package.json
+              cp /alertas/bridge-openclaw.plugin.json /tools/alertas-bridge/openclaw.plugin.json
+              cp /alertas/bridge-index.js /tools/alertas-bridge/index.js
+              chmod 0444 /tools/alertas-bridge/*
+              chmod 0555 /tools/alertas-bridge
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 32Mi
+              cpu: 50m
+          volumeMounts:
+            - name: alertas
+              mountPath: /alertas
+              readOnly: true
+            - name: gastos-tools
+              mountPath: /tools
+        {{- end }}
       containers:
         - name: gateway
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -274,6 +331,23 @@ spec:
                   optional: true
             {{- end }}
             {{- end }}
+            {{- if .Values.alertas.enabled }}
+            # plugin alertas-bridge (Alertmanager -> grupo de WhatsApp, comandos de silencio)
+            - name: ALERTAS_ALERTMANAGER_URL
+              value: {{ .Values.alertas.alertmanagerUrl | quote }}
+            - name: ALERTAS_WEBHOOK_PATH
+              value: {{ .Values.alertas.webhookPath | quote }}
+            - name: ALERTAS_STATE_DIR
+              value: /home/node/.openclaw/alertas
+            {{- range list "ALERTAS_WEBHOOK_TOKEN" "WA_GROUP_ALERTAS" }}
+            - name: {{ . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.existingSecret }}
+                  key: {{ . }}
+                  optional: true
+            {{- end }}
+            {{- end }}
           # En reposo usa ~1.5 GiB de RSS (heap ~0.3 GiB; el resto es nativo: SQLite, workers).
           # Con 2 GiB, un turno de agente + otro proceso node en el contenedor provocaron OOM.
           resources:
@@ -320,10 +394,12 @@ spec:
               mountPath: /home/node/.openclaw
             - name: tmp
               mountPath: /tmp
-            {{- if .Values.gastos.enabled }}
+            {{- if or .Values.gastos.enabled .Values.alertas.enabled }}
             - name: gastos-tools
               mountPath: /opt/gastos-tools
               readOnly: true
+            {{- end }}
+            {{- if .Values.gastos.enabled }}
             - name: gastos-secrets
               mountPath: /run/secrets/gastos
               readOnly: true
@@ -349,13 +425,20 @@ spec:
         - name: exec-approvals
           configMap:
             name: openclaw-exec-approvals
+        {{- if or .Values.gastos.enabled .Values.alertas.enabled }}
+        - name: gastos-tools
+          emptyDir:
+            sizeLimit: 100Mi
+        {{- end }}
+        {{- if .Values.alertas.enabled }}
+        - name: alertas
+          configMap:
+            name: openclaw-alertas
+        {{- end }}
         {{- if .Values.gastos.enabled }}
         - name: gastos
           configMap:
             name: openclaw-gastos
-        - name: gastos-tools
-          emptyDir:
-            sizeLimit: 100Mi
         - name: gastos-secrets
           secret:
             secretName: {{ .Values.existingSecret }}
