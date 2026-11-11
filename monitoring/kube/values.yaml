@@ -82,6 +82,19 @@ kube:
   prometheus:
     prometheusSpec:
       additionalScrapeConfigs:
+        # Mac Studio M1 Max (servidor de IA / Ollama): node_exporter via brew + textfile de macmon
+        # (temperaturas, potencia, GPU, memoria unificada). Se etiqueta como job=node-exporter para
+        # que entre en el dashboard multi-node junto a los nodos y al NAS.
+        - job_name: mac-studio
+          scrape_interval: 15s
+          static_configs:
+            - targets:
+                - 192.168.100.149:9100
+          relabel_configs:
+            - target_label: job
+              replacement: node-exporter
+            - target_label: nodename
+              replacement: mac-studio
         - job_name: kube-etcd
           scheme: http
           metrics_path: /metrics
