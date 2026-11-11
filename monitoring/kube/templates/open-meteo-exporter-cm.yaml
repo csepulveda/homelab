@@ -1,0 +1,51 @@
+# json_exporter compartido: modulo `default` = Open-Meteo, modulo `ollama` = estado de Ollama en el Mac Studio.
+# Temperatura ambiente (Vitacura, Santiago) desde Open-Meteo (API gratuita, sin llave) via json_exporter.
+# Se scrapea cada 5 min (288 consultas/dia, muy por debajo del limite gratuito de 10.000/dia).
+# Metricas: openmeteo_current_temperature_celsius, openmeteo_current_apparent_temperature_celsius,
+# openmeteo_current_relative_humidity_percent, openmeteo_current_weather_code,
+# openmeteo_daily_temperature_max_celsius / _min_celsius (dia en curso), todas con location="vitacura".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: open-meteo-exporter-cm
+  namespace: monitoring
+data:
+  config.yml: |
+    modules:
+      default:
+        metrics:
+          - name: openmeteo_current
+            type: object
+            help: Condiciones actuales segun Open-Meteo
+            path: '{ .current }'
+            labels:
+              location: vitacura
+            values:
+              temperature_celsius: '{ .temperature_2m }'
+              apparent_temperature_celsius: '{ .apparent_temperature }'
+              relative_humidity_percent: '{ .relative_humidity_2m }'
+              weather_code: '{ .weather_code }'
+          - name: openmeteo_daily
+            type: object
+            help: Maxima y minima pronosticadas para el dia en curso segun Open-Meteo
+            path: '{ .daily }'
+            labels:
+              location: vitacura
+            values:
+              temperature_max_celsius: '{ .temperature_2m_max[0] }'
+              temperature_min_celsius: '{ .temperature_2m_min[0] }'
+      # Ollama del Mac Studio (192.168.100.149:11434/api/ps): una serie por modelo cargado en memoria.
+      # Sin modelos cargados no hay series (usar `or vector(0)`). json_exporter devuelve 503 si Ollama no responde,
+      # asi que up{instance="192.168.100.149:11434"} refleja si Ollama esta vivo (no emite probe_success).
+      ollama:
+        metrics:
+          - name: ollama_loaded_model
+            type: object
+            help: Modelo cargado en Ollama segun /api/ps
+            path: '{ .models[*] }'
+            labels:
+              model: '{ .name }'
+            values:
+              size_bytes: '{ .size }'
+              vram_bytes: '{ .size_vram }'
+              context_length: '{ .context_length }'
