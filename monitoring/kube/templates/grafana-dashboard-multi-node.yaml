@@ -255,7 +255,7 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
+            "w": 4,
             "x": 0,
             "y": 8
           },
@@ -356,8 +356,8 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
-            "x": 6,
+            "w": 4,
+            "x": 4,
             "y": 8
           },
           "id": 19,
@@ -447,8 +447,8 @@ data:
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
-            "x": 12,
+            "w": 4,
+            "x": 8,
             "y": 8
           },
           "id": 20,
@@ -522,6 +522,7 @@ data:
                 }
               },
               "mappings": [],
+              "unit": "celsius",
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -536,12 +537,20 @@ data:
                 ]
               }
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Ambiente Vitacura (Open-Meteo)"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}}
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 7,
-            "w": 6,
-            "x": 18,
+            "w": 8,
+            "x": 12,
             "y": 8
           },
           "id": 21,
@@ -568,13 +577,134 @@ data:
               "editorMode": "code",
               "expr": " avg by (instance) (node_hwmon_temp_celsius{instance=~\"192.168.100.155:9100\", chip=\"platform_coretemp_0\"})",
               "hide": false,
-              "legendFormat": "{{`{{instance}}`}}",
+              "legendFormat": "NAS CPU (coretemp)",
               "range": true,
               "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "openmeteo_current_temperature_celsius{location=\"vitacura\"}",
+              "hide": false,
+              "legendFormat": "Ambiente Vitacura (Open-Meteo)",
+              "range": true,
+              "refId": "E"
             }
           ],
-          "title": "192.168.100.155:9100",
+          "title": "Temperatura: NAS CPU vs ambiente Vitacura",
           "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "Open-Meteo, estacion virtual Vitacura (-33.38, -70.57). Se actualiza cada 5 min.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 15
+                  },
+                  {
+                    "color": "orange",
+                    "value": 28
+                  },
+                  {
+                    "color": "red",
+                    "value": 33
+                  }
+                ]
+              },
+              "unit": "celsius"
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Humedad"},
+                "properties": [
+                  {"id": "unit", "value": "humidity"},
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}}
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 4,
+            "x": 20,
+            "y": 8
+          },
+          "id": 25,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value_and_name",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.1.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "openmeteo_current_temperature_celsius{location=\"vitacura\"}",
+              "legendFormat": "Ahora",
+              "instant": true,
+              "range": false,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "openmeteo_daily_temperature_max_celsius{location=\"vitacura\"}",
+              "legendFormat": "Max hoy",
+              "instant": true,
+              "range": false,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "openmeteo_current_relative_humidity_percent{location=\"vitacura\"}",
+              "legendFormat": "Humedad",
+              "instant": true,
+              "range": false,
+              "refId": "C"
+            }
+          ],
+          "title": "Ambiente Vitacura",
+          "type": "stat"
         },
         {
           "collapsed": false,
