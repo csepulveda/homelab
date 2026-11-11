@@ -1009,7 +1009,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "max(probe_success{job=\"ollama\"}) or vector(0)",
+              "expr": "max(up{instance=\"192.168.100.149:11434\"}) or vector(0)",
               "legendFormat": "Ollama responde",
               "instant": true,
               "range": false,

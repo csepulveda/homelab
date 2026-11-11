@@ -35,7 +35,8 @@ data:
               temperature_max_celsius: '{ .temperature_2m_max[0] }'
               temperature_min_celsius: '{ .temperature_2m_min[0] }'
       # Ollama del Mac Studio (192.168.100.149:11434/api/ps): una serie por modelo cargado en memoria.
-      # Sin modelos cargados no hay series (usar `or vector(0)`); probe_success{job="ollama"} indica si responde.
+      # Sin modelos cargados no hay series (usar `or vector(0)`). json_exporter devuelve 503 si Ollama no responde,
+      # asi que up{instance="192.168.100.149:11434"} refleja si Ollama esta vivo (no emite probe_success).
       ollama:
         metrics:
           - name: ollama_loaded_model
@@ -44,7 +45,6 @@ data:
             path: '{ .models[*] }'
             labels:
               model: '{ .name }'
-              runner: '{ .runner }'
             values:
               size_bytes: '{ .size }'
               vram_bytes: '{ .size_vram }'
