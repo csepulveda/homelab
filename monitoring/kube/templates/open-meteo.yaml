@@ -1,0 +1,123 @@
+# Temperatura ambiente (Vitacura, Santiago) desde Open-Meteo (API gratuita, sin llave) via json_exporter.
+# Se scrapea cada 5 min (288 consultas/dia, muy por debajo del limite gratuito de 10.000/dia).
+# Metricas: openmeteo_current_temperature_celsius, openmeteo_current_apparent_temperature_celsius,
+# openmeteo_current_relative_humidity_percent, openmeteo_current_weather_code,
+# openmeteo_daily_temperature_max_celsius / _min_celsius (dia en curso), todas con location="vitacura".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: open-meteo-exporter-cm
+  namespace: monitoring
+data:
+  config.yml: |
+    modules:
+      default:
+        metrics:
+          - name: openmeteo_current
+            type: object
+            help: Condiciones actuales segun Open-Meteo
+            path: '{ .current }'
+            labels:
+              location: vitacura
+            values:
+              temperature_celsius: '{ .temperature_2m }'
+              apparent_temperature_celsius: '{ .apparent_temperature }'
+              relative_humidity_percent: '{ .relative_humidity_2m }'
+              weather_code: '{ .weather_code }'
+          - name: openmeteo_daily
+            type: object
+            help: Maxima y minima pronosticadas para el dia en curso segun Open-Meteo
+            path: '{ .daily }'
+            labels:
+              location: vitacura
+            values:
+              temperature_max_celsius: '{ .temperature_2m_max[0] }'
+              temperature_min_celsius: '{ .temperature_2m_min[0] }'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-meteo-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: open-meteo-exporter}
+  template:
+    metadata:
+      labels: {app: open-meteo-exporter}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: json-exporter
+          image: quay.io/prometheuscommunity/json-exporter:v0.8.0
+          args:
+            - --config.file=/config/config.yml
+          ports:
+            - name: http-metrics
+              containerPort: 7979
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 5m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          readinessProbe:
+            httpGet: {path: /, port: http-metrics}
+            periodSeconds: 10
+          volumeMounts:
+            - name: cfg
+              mountPath: /config
+              readOnly: true
+      volumes:
+        - name: cfg
+          configMap:
+            name: open-meteo-exporter-cm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-meteo-exporter
+  namespace: monitoring
+  labels:
+    app: open-meteo-exporter
+spec:
+  selector: {app: open-meteo-exporter}
+  ports:
+    - name: http-metrics
+      port: 7979
+      targetPort: http-metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: open-meteo-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels: {app: open-meteo-exporter}
+  namespaceSelector:
+    matchNames: ["monitoring"]
+  endpoints:
+    - port: http-metrics
+      path: /probe
+      interval: 5m
+      scrapeTimeout: 30s
+      params:
+        module: ["default"]
+        target: ["https://api.open-meteo.com/v1/forecast?latitude=-33.3833&longitude=-70.5667&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=America/Santiago"]
+      relabelings:
+        - action: replace
+          targetLabel: instance
+          replacement: "open-meteo-vitacura"
+      metricRelabelings:
+        - action: replace
+          targetLabel: job
+          replacement: "open-meteo"
