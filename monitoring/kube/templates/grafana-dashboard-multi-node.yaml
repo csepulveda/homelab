@@ -727,7 +727,7 @@ data:
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "description": "Sensores del SoC via macmon (textfile de node_exporter en el Mac Studio). La GPU no entrega lectura mientras esta apagada (idle total): la linea mantiene el ultimo valor conocido.",
+          "description": "Sensores del SoC via macmon (textfile de node_exporter en el Mac Studio). La GPU no entrega lectura mientras esta apagada (idle total): se arrastra el ultimo valor medido hasta 6 h (last_over_time); mas alla de eso la serie se corta.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -751,12 +751,6 @@ data:
                 "properties": [
                   {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}},
                   {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}}
-                ]
-              },
-              {
-                "matcher": {"id": "byName", "options": "Mac gpu"},
-                "properties": [
-                  {"id": "custom.spanNulls", "value": true}
                 ]
               }
             ]
@@ -788,10 +782,21 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "macmon_temp_celsius{instance=\"192.168.100.149:9100\"}",
-              "legendFormat": "Mac {{`{{sensor}}`}}",
+              "expr": "macmon_temp_celsius{instance=\"192.168.100.149:9100\", sensor=\"cpu\"}",
+              "legendFormat": "Mac cpu",
               "range": true,
               "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "last_over_time(macmon_temp_celsius{instance=\"192.168.100.149:9100\", sensor=\"gpu\"}[6h])",
+              "legendFormat": "Mac gpu (último valor medido)",
+              "range": true,
+              "refId": "C"
             },
             {
               "datasource": {
