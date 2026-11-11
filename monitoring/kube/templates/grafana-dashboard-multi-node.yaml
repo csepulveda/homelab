@@ -232,7 +232,7 @@ data:
                 }
               },
               "mappings": [],
-              "unit": "amp",
+              "unit": "watt",
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -251,7 +251,16 @@ data:
                 ]
               }
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Mac Studio (macmon)"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}},
+                  {"id": "custom.fillOpacity", "value": 0}
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 7,
@@ -269,7 +278,7 @@ data:
             },
             "tooltip": {
               "hideZeros": false,
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -277,13 +286,20 @@ data:
           "targets": [
             {
               "editorMode": "code",
-              "expr": "esphome_sensor_value{id=\"power_current\", node=\"power\"}",
-              "legendFormat": "Current (A)",
+              "expr": "esphome_sensor_value{id=\"power_watts\", node=\"power\"}",
+              "legendFormat": "Rack (ESPHome)",
               "range": true,
               "refId": "A"
+            },
+            {
+              "editorMode": "code",
+              "expr": "macmon_power_watts{instance=\"192.168.100.149:9100\", component=\"system\"}",
+              "legendFormat": "Mac Studio (macmon)",
+              "range": true,
+              "refId": "B"
             }
           ],
-          "title": "ESPHome - Current (A)",
+          "title": "Potencia: rack (ESPHome) y Mac Studio",
           "type": "timeseries"
         },
         {
@@ -711,7 +727,7 @@ data:
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "description": "Sensores del SoC via macmon (textfile de node_exporter en el Mac Studio).",
+          "description": "Sensores del SoC via macmon (textfile de node_exporter en el Mac Studio). La GPU no entrega lectura mientras esta apagada (idle total): la linea mantiene el ultimo valor conocido.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -735,6 +751,12 @@ data:
                 "properties": [
                   {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}},
                   {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Mac gpu"},
+                "properties": [
+                  {"id": "custom.spanNulls", "value": true}
                 ]
               }
             ]
