@@ -651,7 +651,7 @@ data:
           "id": 25,
           "options": {
             "colorMode": "value",
-            "graphMode": "area",
+            "graphMode": "none",
             "justifyMode": "auto",
             "orientation": "auto",
             "reduceOptions": {
@@ -674,7 +674,8 @@ data:
               "editorMode": "code",
               "expr": "openmeteo_current_temperature_celsius{location=\"vitacura\"}",
               "legendFormat": "Ahora",
-              "range": true,
+              "instant": true,
+              "range": false,
               "refId": "A"
             },
             {
@@ -685,7 +686,8 @@ data:
               "editorMode": "code",
               "expr": "openmeteo_daily_temperature_max_celsius{location=\"vitacura\"}",
               "legendFormat": "Max hoy",
-              "range": true,
+              "instant": true,
+              "range": false,
               "refId": "B"
             },
             {
@@ -696,7 +698,8 @@ data:
               "editorMode": "code",
               "expr": "openmeteo_current_relative_humidity_percent{location=\"vitacura\"}",
               "legendFormat": "Humedad",
-              "range": true,
+              "instant": true,
+              "range": false,
               "refId": "C"
             }
           ],
