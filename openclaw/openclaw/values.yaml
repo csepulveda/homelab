@@ -39,6 +39,7 @@ managedConfigPaths:
   - agents.ownership
   - agents.entries
   - agents.defaults.systemAgent
+  - agents.defaults.heartbeat
   # sin resets globales de sesión (el grupo de gastos ya no pasa por el modelo: plugin gastos-bridge)
   - session.resetByType
   # plugin gastos-bridge: cargado desde la carpeta read-only de herramientas

@@ -80,6 +80,10 @@ data:
         },
         "defaults": {
           "systemAgent": { "agentId": "main" },
+          // Sin heartbeat periódico: el default (30m) despertaba a gemma4:26b en el Mac
+          // Studio un minuto cada media hora sin nada que revisar. Los chequeos útiles
+          // (resumen de gastos 21:30, cartola 10:00) son jobs de cron propios.
+          "heartbeat": { "every": "0m" },
           "workspace": "~/.openclaw/workspace",
           "model": { "primary": {{ printf "ollama/%s" .Values.ollama.primaryModel | quote }} }
         }
