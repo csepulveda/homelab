@@ -26,6 +26,9 @@ data:
     set -u
     # El CLI va como archivo real (no el symlink ..data/ del ConfigMap): la allowlist de
     # exec compara la ruta real del ejecutable. Primero, para que exista aunque fallen las descargas.
+    # El emptyDir sobrevive a reinicios del pod en el mismo nodo (corte de luz): la carpeta
+    # 0555 de la corrida anterior impediría borrarla y copiar encima.
+    [ ! -d /tools/gastos-bridge ] || chmod -R u+w /tools/gastos-bridge
     rm -rf /tools/gastos /tools/gastos_parse.py /tools/gastos-bridge
     cp /gastos/gastos /gastos/gastos_parse.py /tools/
     chmod 0555 /tools/gastos

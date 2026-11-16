@@ -235,6 +235,9 @@ spec:
             - -c
             - |
               set -e
+              # El emptyDir sobrevive a reinicios del pod en el mismo nodo (p. ej. corte de luz):
+              # la carpeta quedó 0555 en la corrida anterior y rm fallaría con Permission denied.
+              [ ! -d /tools/alertas-bridge ] || chmod -R u+w /tools/alertas-bridge
               rm -rf /tools/alertas-bridge
               mkdir -p /tools/alertas-bridge
               cp /alertas/bridge-package.json /tools/alertas-bridge/package.json
