@@ -259,6 +259,14 @@ data:
                   {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}},
                   {"id": "custom.fillOpacity", "value": 0}
                 ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Resto del rack: NAS + switches (enchufe − Mac)"},
+                "properties": [
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dot", "dash": [0, 10]}},
+                  {"id": "custom.fillOpacity", "value": 0}
+                ]
               }
             ]
           },
@@ -297,6 +305,13 @@ data:
               "legendFormat": "Mac Studio (macmon)",
               "range": true,
               "refId": "B"
+            },
+            {
+              "editorMode": "code",
+              "expr": "clamp_min(max(esphome_sensor_value{id=\"power_watts\", node=\"power\"}) - on() group_left() max(macmon_power_watts{instance=\"192.168.100.149:9100\", component=\"system\"}), 0)",
+              "legendFormat": "Resto del rack: NAS + switches (enchufe − Mac)",
+              "range": true,
+              "refId": "C"
             }
           ],
           "title": "Potencia: rack (ESPHome) y Mac Studio",
