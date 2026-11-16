@@ -263,7 +263,8 @@ data:
               {
                 "matcher": {"id": "byName", "options": "Resto del rack: NAS + switches (enchufe − Mac)"},
                 "properties": [
-                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "purple"}},
+                  {"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}},
+                  {"id": "custom.lineStyle", "value": {"fill": "dot", "dash": [0, 10]}},
                   {"id": "custom.fillOpacity", "value": 0}
                 ]
               }
