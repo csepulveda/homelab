@@ -17,6 +17,8 @@ autodiscovery:
     helm:
       ignore:
         - path: "multimedia/jellyfin"
+        # OpenClaw fijado en 2026.10.9 hasta migrar a 2026.11 (ver openclaw/openclaw/values.yaml)
+        - path: "openclaw/openclaw"
 
 actions:
   default:
