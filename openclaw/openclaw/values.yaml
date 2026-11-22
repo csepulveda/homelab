@@ -1,6 +1,10 @@
 image:
   repository: ghcr.io/openclaw/openclaw
-  tag: 2026.11.5-slim@sha256:9c74476e3e79b5a1595fd5cf904286eaba3471c10c640aaa9a361a89b41d0882
+  # Fijado en 2026.10.9: 2026.11.x retiró agents.defaults.heartbeat (exec-policy falla
+  # "Unrecognized key") y su doctor/migración de estado rechaza los directorios con
+  # permisos de grupo que deja fsGroup y el rootfs read-only. Subir de versión requiere
+  # una migración planificada; mientras tanto updatecli ignora este chart.
+  tag: 2026.10.9-slim@sha256:1a2a3ce113e435039dbeac5ae261759bb4759908563d91c81059e896b38c5d98
 
 storage:
   storageClassName: iscsi
